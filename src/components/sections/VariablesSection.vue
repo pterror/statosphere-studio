@@ -9,23 +9,23 @@
     />
     <div class="flex-1 min-w-0 overflow-y-auto p-4" v-if="item">
       <div class="flex flex-col gap-3 max-w-2xl">
-        <FieldRow label="Name" desc="Name by which this variable is referenced throughout the stage.">
+        <FieldRow label="Name" section="variables" field="name">
           <input v-model="item.name" class="field-input" @input="store.markDirty()" />
         </FieldRow>
-        <FieldRow label="Initial Value" desc="The initial value for this variable when the stage is loaded.">
-          <input v-model="item.initialValue" class="field-input" @input="store.markDirty()" />
+        <FieldRow label="Initial Value" section="variables" field="initialValue">
+          <ExpressionField v-model="item.initialValue" :rows="2" @update:model-value="store.markDirty()" />
         </FieldRow>
-        <FieldRow label="Initial Input Update" desc="The value this variable will be set to immediately following a user's input.">
-          <input v-model="item.perTurnUpdate" class="field-input" @input="store.markDirty()" />
+        <FieldRow label="Initial Input Update" section="variables" field="perTurnUpdate">
+          <ExpressionField v-model="item.perTurnUpdate" :rows="2" @update:model-value="store.markDirty()" />
         </FieldRow>
-        <FieldRow label="Final Input Update" desc="The value this variable will be set to after a user's input has been processed (after classifiers have run).">
-          <input v-model="item.postInputUpdate" class="field-input" @input="store.markDirty()" />
+        <FieldRow label="Final Input Update" section="variables" field="postInputUpdate">
+          <ExpressionField v-model="item.postInputUpdate" :rows="2" @update:model-value="store.markDirty()" />
         </FieldRow>
-        <FieldRow label="Initial Response Update" desc="The value this variable will be set to immediately following a bot's response.">
-          <input v-model="item.preResponseUpdate" class="field-input" @input="store.markDirty()" />
+        <FieldRow label="Initial Response Update" section="variables" field="preResponseUpdate">
+          <ExpressionField v-model="item.preResponseUpdate" :rows="2" @update:model-value="store.markDirty()" />
         </FieldRow>
-        <FieldRow label="Final Response Update" desc="The value this variable will be set to after a bot's response has been processed (after classifiers have run).">
-          <input v-model="item.postResponseUpdate" class="field-input" @input="store.markDirty()" />
+        <FieldRow label="Final Response Update" section="variables" field="postResponseUpdate">
+          <ExpressionField v-model="item.postResponseUpdate" :rows="2" @update:model-value="store.markDirty()" />
         </FieldRow>
         <div v-if="fieldErrors.length" class="text-xs text-red-400">
           <div v-for="e in fieldErrors" :key="e">{{ e }}</div>
@@ -46,6 +46,7 @@ import { useConfigStore, type Variable } from '../../stores/config'
 import ElementList from '../ElementList.vue'
 import HelpRail from '../HelpRail.vue'
 import FieldRow from './FieldRow.vue'
+import ExpressionField from '../widgets/ExpressionField.vue'
 
 const store = useConfigStore()
 const selected = ref<number | null>(null)

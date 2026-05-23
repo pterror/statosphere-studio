@@ -9,13 +9,13 @@
     />
     <div class="flex-1 min-w-0 overflow-y-auto p-4" v-if="item">
       <div class="flex flex-col gap-3 max-w-2xl">
-        <FieldRow label="Name" desc="Name by which this function is referenced throughout the stage.">
+        <FieldRow label="Name" section="functions" field="name">
           <input v-model="item.name" class="field-input" @input="store.markDirty()" />
         </FieldRow>
-        <FieldRow label="Parameters" desc="Comma-delimited list of parameters.">
+        <FieldRow label="Parameters" section="functions" field="parameters">
           <input v-model="item.parameters" class="field-input" @input="store.markDirty()" />
         </FieldRow>
-        <FieldRow label="Function Body" desc="The body of this function.">
+        <FieldRow label="Function Body" section="functions" field="body">
           <textarea v-model="item.body" class="field-input font-mono" rows="8" @input="store.markDirty()" />
         </FieldRow>
         <div v-if="fieldErrors.length" class="text-xs text-red-400">
