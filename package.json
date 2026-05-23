@@ -1,15 +1,18 @@
 {
-  "name": "statosphere-studio",
+  "name": "@pterror/statosphere-studio",
   "version": "0.1.0",
   "type": "module",
-  "files": ["dist"],
+  "files": ["dist", "schemas", "templates", "help"],
   "main": "./dist/statosphere-studio.umd.cjs",
   "module": "./dist/statosphere-studio.es.js",
+  "types": "./dist/statosphere-studio.d.ts",
   "exports": {
     ".": {
       "import": "./dist/statosphere-studio.es.js",
-      "require": "./dist/statosphere-studio.umd.cjs"
-    }
+      "require": "./dist/statosphere-studio.cjs",
+      "types": "./dist/statosphere-studio.d.ts"
+    },
+    "./dist/style.css": "./dist/style.css"
   },
   "scripts": {
     "dev": "vite",
@@ -19,6 +22,10 @@
     "lint": "vue-tsc --noEmit",
     "typecheck": "vue-tsc --noEmit",
     "preview": "vite preview"
+  },
+  "peerDependencies": {
+    "pinia": ">=2.0.0",
+    "vue": ">=3.0.0"
   },
   "dependencies": {
     "@vueuse/core": "^10.11.0",

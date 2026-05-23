@@ -28,13 +28,23 @@ export default defineConfig(({ mode }) => {
       lib: {
         entry: resolve(__dirname, 'src/lib.ts'),
         name: 'StatosphereStudio',
-        formats: ['es', 'umd'],
-        fileName: (format) => `statosphere-studio.${format}.${format === 'es' ? 'js' : 'cjs'}`,
+        formats: ['es', 'cjs', 'umd'],
+        fileName: (format) => {
+          if (format === 'es') return 'statosphere-studio.es.js'
+          if (format === 'cjs') return 'statosphere-studio.cjs'
+          return 'statosphere-studio.umd.cjs'
+        },
       },
       rollupOptions: {
-        external: ['vue'],
+        external: ['vue', 'pinia', 'marked', 'ajv', 'ajv-formats'],
         output: {
-          globals: { vue: 'Vue' },
+          globals: {
+            vue: 'Vue',
+            pinia: 'Pinia',
+            marked: 'marked',
+            ajv: 'Ajv',
+            'ajv-formats': 'ajvFormats',
+          },
         },
       },
     },
