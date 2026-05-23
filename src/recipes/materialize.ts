@@ -2,6 +2,7 @@ import type { RecipeInstance, RecipeDef, SchemaArrays, ElementType, Substitution
 import type { RenameMap } from './rewrite-refs'
 import { rewriteRefs } from './rewrite-refs'
 import { getRecipe } from './registry'
+import { resolveChildParams } from './compose'
 
 // Lowercase, replace non-alphanumeric runs with _, trim leading/trailing _.
 function slugify(s: string): string {
@@ -86,6 +87,78 @@ export function localsFromTemplate(template: SchemaArrays): Locals {
   }
 }
 
+// Collect all locals from a composed recipe by recursing into children.
+// Used for extras rewriting and stripPrefix bookkeeping.
+function collectComposedLocals(def: RecipeDef, _params: Record<string, unknown>, slugPrefix: string): Locals {
+  if (def.source.kind !== 'composed') return def.locals
+  const result: Locals = { variables: [], classifiers: [], generators: [], functions: [] }
+  for (const ref of def.source.refs) {
+    const childDef = getRecipe(ref.recipeId)
+    if (!childDef) continue
+    const childSlugPrefix = slugPrefix + '_' + ref.refId
+    const childLocals = childDef.source.kind === 'composed'
+      ? collectComposedLocals(childDef, {}, childSlugPrefix)
+      : childDef.locals
+    for (const k of ['variables', 'classifiers', 'generators', 'functions'] as const) {
+      for (const n of childLocals[k]) result[k].push(`${childSlugPrefix}_${n}`.slice(slugPrefix.length + 1))
+    }
+  }
+  return result
+}
+
+function mergeArrays(acc: SchemaArrays, child: SchemaArrays): void {
+  for (const et of ELEMENT_TYPES) {
+    for (const el of child[et]) acc[et].push(el)
+  }
+}
+
+function emptyArrays(): SchemaArrays {
+  return { variables: [], classifiers: [], generators: [], contentRules: [], functions: [] }
+}
+
+interface MaterializeCtx {
+  slugPrefix: string
+  refIdPath: string[]
+  instance: RecipeInstance
+}
+
+function materializeRecipe(
+  def: RecipeDef,
+  params: Record<string, unknown>,
+  ctx: MaterializeCtx,
+): SchemaArrays {
+  if (def.source.kind === 'composed') {
+    const acc = emptyArrays()
+    for (const ref of def.source.refs) {
+      const refIdPath = [...ctx.refIdPath, ref.refId]
+      const childOverrides = ctx.instance.childOverrides?.[refIdPath.join('.')]
+      const childParams = resolveChildParams(ref, params, childOverrides)
+      const childDef = getRecipe(ref.recipeId)
+      if (!childDef) continue
+      const childSlugPrefix = ctx.slugPrefix + '_' + ref.refId
+      const childArrays = materializeRecipe(childDef, childParams, {
+        slugPrefix: childSlugPrefix,
+        refIdPath,
+        instance: ctx.instance,
+      })
+      mergeArrays(acc, childArrays)
+    }
+    return acc
+  }
+
+  let bareArrays: SchemaArrays
+  if (def.source.kind === 'builtin') {
+    bareArrays = def.source.materialize(params)
+  } else {
+    bareArrays = interpretTemplate(def.source.template, def.source.substitutions, params)
+  }
+
+  const locals: Locals = def.locals ?? localsFromTemplate(bareArrays)
+  const renameMap = buildRenameMap(locals, ctx.slugPrefix)
+  const rewritten = rewriteRefs(bareArrays, renameMap)
+  return applyRenameToNames(rewritten, renameMap)
+}
+
 export function materializeInstances(instances: RecipeInstance[], opts: MaterializeOptions = {}): SchemaArrays {
   const result: SchemaArrays = {
     variables: [],
@@ -121,41 +194,36 @@ export function materializeInstances(instances: RecipeInstance[], opts: Material
     const recipe = getRecipe(inst.recipeId)
     if (!recipe) continue
 
-    let bareArrays: SchemaArrays
-    if (recipe.source.kind === 'builtin') {
-      bareArrays = recipe.source.materialize(inst.params)
-    } else {
-      bareArrays = interpretTemplate(recipe.source.template, recipe.source.substitutions, inst.params)
-    }
-
-    // Determine locals: declared on def, or derived from template for custom recipes without locals.
-    const locals: Locals = recipe.locals ?? localsFromTemplate(bareArrays)
-
     const slugBase = slugify(inst.name) || slugify(inst.recipeId) || 'instance'
     const slug = assignSlug(slugBase)
-    const renameMap = buildRenameMap(locals, slug)
 
-    // Rewrite all identifier references in expression fields.
-    const rewritten = rewriteRefs(bareArrays, renameMap)
-    // Then rename the name fields themselves.
-    const prefixed = applyRenameToNames(rewritten, renameMap)
+    const prefixed = materializeRecipe(recipe, inst.params, {
+      slugPrefix: slug,
+      refIdPath: [],
+      instance: inst,
+    })
 
-    // Build pinned map keyed by bare original name (pre-prefix) and prefixed name.
+    // Determine locals for stripPrefix bookkeeping.
+    const locals: Locals = recipe.source.kind === 'composed'
+      ? collectComposedLocals(recipe, inst.params, slug)
+      : (recipe.locals ?? localsFromTemplate(prefixed))
+
+    // Build pinned map keyed by prefixed name.
     const pinnedMap = new Map<string, any>()
     for (const p of inst.pinned) {
       pinnedMap.set(`${p.elementType}:${p.elementName}`, p.override)
     }
 
+    // Build renameMap for extras rewriting (only needed for non-composed leaf locals).
+    const renameMap = buildRenameMap(locals, slug)
+
     for (const et of ELEMENT_TYPES) {
       for (const el of prefixed[et]) {
         const prefixedName = el?.name ?? ''
-        // Pinned overrides are keyed by prefixed name (post-rename).
         const pinned = pinnedMap.get(`${et}:${prefixedName}`)
         const resolved = pinned !== undefined ? pinned : el
         result[et].push(resolved)
       }
-      // Extras are user-written expecting prefixed identifiers to already exist.
-      // Rewrite extras with the same renameMap so refs resolve correctly.
       const rewrittenExtras = rewriteRefs(inst.extras, renameMap)
       for (const el of rewrittenExtras[et]) {
         result[et].push(el)

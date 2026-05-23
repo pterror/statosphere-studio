@@ -1,4 +1,5 @@
 import type { RecipeDef } from '../types'
+import atoms from './atoms/index'
 import hpTracker from './hp-tracker'
 import moodCompanion from './mood-companion'
 import staminaTracker from './stamina-tracker'
@@ -12,6 +13,7 @@ import timeOfDay from './time-of-day'
 import custom from './custom'
 
 const builtins: RecipeDef[] = [
+  ...atoms,
   hpTracker,
   moodCompanion,
   staminaTracker,

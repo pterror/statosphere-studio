@@ -34,6 +34,18 @@ export interface Locals {
   functions: string[]
 }
 
+export interface ComposedRef {
+  refId: string
+  recipeId: string
+  defaultName: string
+  paramBindings: Record<string, ParamBinding>
+}
+
+export type ParamBinding =
+  | { kind: 'literal'; value: unknown }
+  | { kind: 'parent'; paramKey: string }
+  | { kind: 'derived'; expr: string }
+
 export interface RecipeDef {
   id: string
   name: string
@@ -44,6 +56,7 @@ export interface RecipeDef {
   source:
     | { kind: 'builtin'; materialize: (params: Record<string, unknown>) => SchemaArrays }
     | { kind: 'template'; template: SchemaArrays; substitutions: Substitution[] }
+    | { kind: 'composed'; refs: ComposedRef[] }
 }
 
 export interface PinnedElement {
@@ -59,4 +72,5 @@ export interface RecipeInstance {
   params: Record<string, unknown>
   pinned: PinnedElement[]
   extras: SchemaArrays
+  childOverrides?: Record<string, Record<string, unknown>>
 }

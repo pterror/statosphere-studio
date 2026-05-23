@@ -8,7 +8,7 @@ import Ajv from 'ajv'
 import addFormats from 'ajv-formats'
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import type { RecipeDef, SchemaArrays, ParamSpec } from '../src/recipes/types'
+import type { RecipeDef, SchemaArrays, ParamSpec, ComposedRef } from '../src/recipes/types'
 import { interpretTemplate, materializeInstances } from '../src/recipes/materialize'
 
 const ROOT = join(import.meta.dir, '..')
@@ -194,6 +194,143 @@ for (const def of builtins) {
   } else {
     console.log(`ok   dup ${def.id}`)
   }
+}
+
+// ── Atom isolation tests ─────────────────────────────────────────────────────
+console.log('\nAtom isolation tests:')
+
+const atomsModule = await import('../src/recipes/builtins/atoms/index.ts')
+const atoms: RecipeDef[] = atomsModule.default
+
+for (const def of atoms) {
+  const params = defaultParams(def.params)
+  let materialized: SchemaArrays
+  try {
+    if (def.source.kind === 'builtin') {
+      materialized = def.source.materialize(params)
+    } else if (def.source.kind === 'template') {
+      materialized = interpretTemplate(def.source.template, def.source.substitutions, params)
+    } else {
+      console.log(`skip ${def.id} (composed — covered by synthetic test)`)
+      continue
+    }
+  } catch (e) {
+    console.error(`FAIL ${def.id}: materialize threw — ${(e as Error).message}`)
+    allPassed = false
+    continue
+  }
+
+  const atomSections: [string, ReturnType<typeof ajv.compile>, unknown][] = [
+    ['variables', validateVariables, materialized.variables],
+    ['functions', validateFunctions, materialized.functions],
+    ['classifiers', validateClassifiers, materialized.classifiers],
+    ['generators', validateGenerators, materialized.generators],
+    ['contentRules', validateContent, materialized.contentRules],
+  ]
+
+  const atomErrors: string[] = []
+  for (const [section, validate, data] of atomSections) {
+    validate(data)
+    for (const e of validate.errors ?? []) {
+      atomErrors.push(`  ${section}${e.instancePath} ${e.message}`)
+    }
+  }
+
+  if (atomErrors.length > 0) {
+    console.error(`FAIL ${def.id}`)
+    for (const e of atomErrors) console.error(e)
+    allPassed = false
+  } else {
+    console.log(`ok   ${def.id}`)
+  }
+}
+
+// Register atoms for composed test and dup tests
+for (const def of atoms) registerRecipe(def)
+
+// ── Synthetic composed test ──────────────────────────────────────────────────
+console.log('\nSynthetic composed test:')
+
+const syntheticComposed: RecipeDef = {
+  id: 'test/composed-two-atoms',
+  name: 'Test Composed',
+  description: 'Synthetic composed recipe for Phase 3 validation.',
+  params: [
+    { kind: 'string', key: 'counterName', label: 'Counter name', default: 'score' },
+    { kind: 'string', key: 'condition', label: 'Condition', default: 'true' },
+  ],
+  locals: { variables: [], classifiers: [], generators: [], functions: [] },
+  source: {
+    kind: 'composed',
+    refs: [
+      {
+        refId: 'score_counter',
+        recipeId: 'atom/var-counter',
+        defaultName: 'Score Counter',
+        paramBindings: {
+          name: { kind: 'parent', paramKey: 'counterName' },
+          initialValue: { kind: 'literal', value: 0 },
+          perTurnUpdate: { kind: 'literal', value: '' },
+        },
+      } satisfies ComposedRef,
+      {
+        refId: 'status_rule',
+        recipeId: 'atom/rule-status-line',
+        defaultName: 'Status Rule',
+        paramBindings: {
+          condition: { kind: 'parent', paramKey: 'condition' },
+          template: { kind: 'derived', expr: '"Score: " + {{counterName}}' },
+        },
+      } satisfies ComposedRef,
+    ],
+  },
+}
+
+registerRecipe(syntheticComposed)
+
+const composedInstance = {
+  id: 'synth-1',
+  recipeId: 'test/composed-two-atoms',
+  name: 'Composed Test',
+  params: { counterName: 'score', condition: 'true' },
+  pinned: [],
+  extras: { variables: [], classifiers: [], generators: [], contentRules: [], functions: [] },
+}
+
+try {
+  const composedResult = materializeInstances([composedInstance])
+  const composedErrors: string[] = []
+
+  const varNames: string[] = composedResult.variables.map((v: any) => v?.name)
+  // The slug prefix is derived from the instance name + refId: composed_test_score_counter_<local>
+  if (!varNames.some((n: string) => n?.includes('score_counter'))) {
+    composedErrors.push(`  expected variable name containing "score_counter", got: ${varNames.join(', ')}`)
+  }
+
+  const composedSections: [string, ReturnType<typeof ajv.compile>, unknown][] = [
+    ['variables', validateVariables, composedResult.variables],
+    ['functions', validateFunctions, composedResult.functions],
+    ['classifiers', validateClassifiers, composedResult.classifiers],
+    ['generators', validateGenerators, composedResult.generators],
+    ['contentRules', validateContent, composedResult.contentRules],
+  ]
+  for (const [section, validate, data] of composedSections) {
+    validate(data)
+    for (const e of validate.errors ?? []) {
+      composedErrors.push(`  ${section}${e.instancePath} ${e.message}`)
+    }
+  }
+
+  if (composedErrors.length > 0) {
+    console.error(`FAIL synthetic composed`)
+    for (const e of composedErrors) console.error(e)
+    allPassed = false
+  } else {
+    console.log(`ok   synthetic composed (vars: ${varNames.join(', ')})`)
+  }
+} catch (e) {
+  console.error(`FAIL synthetic composed: threw — ${(e as Error).message}`)
+  allPassed = false
 }
 
 if (!allPassed) process.exit(1)
