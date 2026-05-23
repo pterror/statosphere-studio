@@ -202,9 +202,9 @@ function exportEverything() {
   const payload: BundlePayload = {
     version: 'studio-export-1',
     exportedAt: new Date().toISOString(),
-    recipes: JSON.parse(JSON.stringify(recipesStore.instances)),
-    customLibrary: JSON.parse(JSON.stringify(recipesStore.customLibrary)),
-    drafts: JSON.parse(JSON.stringify(draftsStore.list)),
+    recipes: structuredClone(recipesStore.instances),
+    customLibrary: structuredClone(recipesStore.customLibrary),
+    drafts: structuredClone(draftsStore.list),
     settings: settings.export(),
   }
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
@@ -243,9 +243,9 @@ function onFileChange(e: Event) {
 }
 
 function snapshotForUndo() {
-  const snapInstances = JSON.parse(JSON.stringify(recipesStore.instances)) as RecipeInstance[]
-  const snapLibrary = JSON.parse(JSON.stringify(recipesStore.customLibrary)) as RecipeDef[]
-  const snapDrafts = JSON.parse(JSON.stringify(draftsStore.list)) as DraftSlot[]
+  const snapInstances = structuredClone(recipesStore.instances) as RecipeInstance[]
+  const snapLibrary = structuredClone(recipesStore.customLibrary) as RecipeDef[]
+  const snapDrafts = structuredClone(draftsStore.list) as DraftSlot[]
   const snapSettings = settings.export()
   return { snapInstances, snapLibrary, snapDrafts, snapSettings }
 }

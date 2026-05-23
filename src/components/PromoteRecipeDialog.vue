@@ -191,7 +191,7 @@ const sections = computed<Section[]>(() => {
     arr.forEach((el, i) => {
       const fields = collectStringFields(el)
       if (fields.length > 0) {
-        result.push({ elementType: et, index: i, elementName: el?.name ?? '', fields })
+        result.push({ elementType: et, index: i, elementName: (el as { name?: string })?.name ?? '', fields })
       }
     })
   }
@@ -262,7 +262,7 @@ function onCreate() {
   }
 
   // Build template: snapshot of current materialized output.
-  const template: SchemaArrays = JSON.parse(JSON.stringify(props.materialized))
+  const template: SchemaArrays = structuredClone(props.materialized)
 
   // Build substitutions list and ParamSpec array.
   const substitutions: Substitution[] = []

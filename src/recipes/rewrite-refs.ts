@@ -1,4 +1,4 @@
-import type { SchemaArrays } from './types'
+import type { SchemaArrays, ElementUpdate, ClassificationEntry, AnyElement } from './types'
 
 export type RenameMap = {
   variables: Record<string, string>
@@ -24,7 +24,7 @@ function rewriteString(s: string, regexes: [RegExp, Record<string, string>][]): 
   return s
 }
 
-function rewriteUpdates(updates: any[], varRegexes: [RegExp, Record<string, string>][], allRegexes: [RegExp, Record<string, string>][]): any[] {
+function rewriteUpdates(updates: ElementUpdate[], varRegexes: [RegExp, Record<string, string>][], allRegexes: [RegExp, Record<string, string>][]): ElementUpdate[] {
   return updates.map(u => {
     if (!u || typeof u !== 'object') return u
     const clone = { ...u }
@@ -50,20 +50,21 @@ function rewriteDependencies(deps: string, classMap: Record<string, string>, gen
 
 // Walk all expression-bearing fields in a single element and apply a visitor.
 // visitor receives (value: string) and returns the replacement.
-function visitElementStrings(el: any, visitor: (s: string) => string): any {
+// Record<string, unknown> covers all five element shapes without a union cast.
+function visitElementStrings(el: Record<string, unknown>, visitor: (s: string) => string): Record<string, unknown> {
   if (!el || typeof el !== 'object') return el
-  const c = { ...el }
+  const c: Record<string, unknown> = { ...el }
   // Variable expression fields
-  for (const field of ['initialValue', 'perTurnUpdate', 'postInputUpdate', 'preResponseUpdate', 'postResponseUpdate', 'body', 'condition', 'modification', 'prompt', 'inputTemplate', 'inputHypothesis'] as const) {
-    if (typeof c[field] === 'string') c[field] = visitor(c[field])
+  for (const field of ['initialValue', 'perTurnUpdate', 'postInputUpdate', 'preResponseUpdate', 'postResponseUpdate', 'body', 'condition', 'modification', 'prompt', 'inputTemplate', 'inputHypothesis']) {
+    if (typeof c[field] === 'string') c[field] = visitor(c[field] as string)
   }
   // dependencies string
   if (typeof c.dependencies === 'string') {
-    c.dependencies = c.dependencies.split(',').map((p: string) => visitor(p.trim())).join(', ')
+    c.dependencies = (c.dependencies as string).split(',').map((p: string) => visitor(p.trim())).join(', ')
   }
   // updates[].variable + updates[].setTo
   if (Array.isArray(c.updates)) {
-    c.updates = c.updates.map((u: any) => {
+    c.updates = (c.updates as ElementUpdate[]).map((u: ElementUpdate) => {
       if (!u || typeof u !== 'object') return u
       const cu = { ...u }
       if (typeof cu.variable === 'string') cu.variable = visitor(cu.variable)
@@ -73,12 +74,12 @@ function visitElementStrings(el: any, visitor: (s: string) => string): any {
   }
   // classifications[].condition + classifications[].updates
   if (Array.isArray(c.classifications)) {
-    c.classifications = c.classifications.map((cls: any) => {
+    c.classifications = (c.classifications as ClassificationEntry[]).map((cls: ClassificationEntry) => {
       if (!cls || typeof cls !== 'object') return cls
       const cc = { ...cls }
       if (typeof cc.condition === 'string') cc.condition = visitor(cc.condition)
       if (Array.isArray(cc.updates)) {
-        cc.updates = cc.updates.map((u: any) => {
+        cc.updates = cc.updates.map((u: ElementUpdate) => {
           if (!u || typeof u !== 'object') return u
           const cu = { ...u }
           if (typeof cu.variable === 'string') cu.variable = visitor(cu.variable)
@@ -95,12 +96,13 @@ function visitElementStrings(el: any, visitor: (s: string) => string): any {
 // Visit all expression-bearing strings across an entire SchemaArrays, applying
 // the visitor to each string.  Returns a new SchemaArrays.
 function visitArraysStrings(arrays: SchemaArrays, visitor: (s: string) => string): SchemaArrays {
+  const wrap = (el: AnyElement) => visitElementStrings(el as unknown as Record<string, unknown>, visitor) as unknown as AnyElement
   return {
-    variables: arrays.variables.map(el => visitElementStrings(el, visitor)),
-    classifiers: arrays.classifiers.map(el => visitElementStrings(el, visitor)),
-    generators: arrays.generators.map(el => visitElementStrings(el, visitor)),
-    contentRules: arrays.contentRules.map(el => visitElementStrings(el, visitor)),
-    functions: arrays.functions.map(el => visitElementStrings(el, visitor)),
+    variables: arrays.variables.map(wrap),
+    classifiers: arrays.classifiers.map(wrap),
+    generators: arrays.generators.map(wrap),
+    contentRules: arrays.contentRules.map(wrap),
+    functions: arrays.functions.map(wrap),
   }
 }
 
@@ -142,34 +144,36 @@ export function rewriteRefs(arrays: SchemaArrays, renameMap: RenameMap): SchemaA
 
   const varRegexes: [RegExp, Record<string, string>][] = varRe ? [[varRe, renameMap.variables]] : []
 
+  type Rec = Record<string, unknown>
+
   // Variables: rewrite expression fields (perTurnUpdate, postInputUpdate, preResponseUpdate, postResponseUpdate, initialValue treated as expression)
   result.variables = result.variables.map(v => {
     if (!v || typeof v !== 'object') return v
-    const c = { ...v }
-    for (const field of ['initialValue', 'perTurnUpdate', 'postInputUpdate', 'preResponseUpdate', 'postResponseUpdate'] as const) {
-      if (typeof c[field] === 'string') c[field] = rewriteString(c[field], allRegexes)
+    const c: Rec = { ...(v as Rec) }
+    for (const field of ['initialValue', 'perTurnUpdate', 'postInputUpdate', 'preResponseUpdate', 'postResponseUpdate']) {
+      if (typeof c[field] === 'string') c[field] = rewriteString(c[field] as string, allRegexes)
     }
-    return c
+    return c as AnyElement
   })
 
   // Functions: rewrite body
   result.functions = result.functions.map(f => {
     if (!f || typeof f !== 'object') return f
-    const c = { ...f }
+    const c: Rec = { ...(f as Rec) }
     if (typeof c.body === 'string') c.body = rewriteString(c.body, allRegexes)
-    return c
+    return c as AnyElement
   })
 
   // Classifiers
   result.classifiers = result.classifiers.map(cl => {
     if (!cl || typeof cl !== 'object') return cl
-    const c = { ...cl }
+    const c: Rec = { ...(cl as Rec) }
     if (typeof c.condition === 'string') c.condition = rewriteString(c.condition, allRegexes)
     if (typeof c.dependencies === 'string') c.dependencies = rewriteDependencies(c.dependencies, renameMap.classifiers, renameMap.generators)
     if (typeof c.inputTemplate === 'string') c.inputTemplate = rewriteString(c.inputTemplate, allRegexes)
     if (typeof c.inputHypothesis === 'string') c.inputHypothesis = rewriteString(c.inputHypothesis, allRegexes)
     if (Array.isArray(c.classifications)) {
-      c.classifications = c.classifications.map((cls: any) => {
+      c.classifications = (c.classifications as ClassificationEntry[]).map((cls: ClassificationEntry) => {
         if (!cls || typeof cls !== 'object') return cls
         const cc = { ...cls }
         if (typeof cc.condition === 'string') cc.condition = rewriteString(cc.condition, allRegexes)
@@ -177,27 +181,27 @@ export function rewriteRefs(arrays: SchemaArrays, renameMap: RenameMap): SchemaA
         return cc
       })
     }
-    return c
+    return c as AnyElement
   })
 
   // Generators
   result.generators = result.generators.map(g => {
     if (!g || typeof g !== 'object') return g
-    const c = { ...g }
+    const c: Rec = { ...(g as Rec) }
     if (typeof c.condition === 'string') c.condition = rewriteString(c.condition, allRegexes)
     if (typeof c.dependencies === 'string') c.dependencies = rewriteDependencies(c.dependencies, renameMap.classifiers, renameMap.generators)
     if (typeof c.prompt === 'string') c.prompt = rewriteString(c.prompt, allRegexes)
-    if (Array.isArray(c.updates)) c.updates = rewriteUpdates(c.updates, varRegexes, allRegexes)
-    return c
+    if (Array.isArray(c.updates)) c.updates = rewriteUpdates(c.updates as ElementUpdate[], varRegexes, allRegexes)
+    return c as AnyElement
   })
 
   // Content rules
   result.contentRules = result.contentRules.map(cr => {
     if (!cr || typeof cr !== 'object') return cr
-    const c = { ...cr }
+    const c: Rec = { ...(cr as Rec) }
     if (typeof c.condition === 'string') c.condition = rewriteString(c.condition, allRegexes)
     if (typeof c.modification === 'string') c.modification = rewriteString(c.modification, allRegexes)
-    return c
+    return c as AnyElement
   })
 
   return result

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
-import type { RecipeInstance, RecipeDef, ElementType, SchemaArrays } from '../recipes/types'
+import type { RecipeInstance, RecipeDef, ElementType, SchemaArrays, AnyElement } from '../recipes/types'
 import { migrateInstance } from '../recipes/types'
 import { materializeInstances, localsFromTemplate, instanceLocals } from '../recipes/materialize'
 import { rewriteIdentifiers } from '../recipes/rewrite-refs'
@@ -76,7 +76,7 @@ export const useRecipesStore = defineStore('recipes', () => {
   }
 
   function snapshotInstances(): RecipeInstance[] {
-    return JSON.parse(JSON.stringify(instances.value))
+    return structuredClone(instances.value)
   }
 
   function restoreInstances(snapshot: RecipeInstance[]): void {
@@ -196,18 +196,18 @@ export const useRecipesStore = defineStore('recipes', () => {
     const pinnedIdx = srcInst.pinned.findIndex(
       (p) => p.elementType === elementType && p.elementName === elementName,
     )
-    let elementData: any = null
+    let elementData: AnyElement | null = null
 
     if (pinnedIdx !== -1) {
-      elementData = JSON.parse(JSON.stringify(srcInst.pinned[pinnedIdx].override))
+      elementData = structuredClone(srcInst.pinned[pinnedIdx].override)
       srcInst.pinned.splice(pinnedIdx, 1)
     } else {
       const srcBucket = srcInst.extrasByPath?.[sourcePath]
       const extrasIdx = srcBucket?.[elementType].findIndex(
-        (el: any) => (el?.name ?? el?.category) === elementName,
+        (el) => ((el as { name?: string; category?: string })?.name ?? (el as { category?: string })?.category) === elementName,
       ) ?? -1
       if (extrasIdx !== -1) {
-        elementData = JSON.parse(JSON.stringify(srcBucket![elementType][extrasIdx]))
+        elementData = structuredClone(srcBucket![elementType][extrasIdx])
         srcBucket![elementType].splice(extrasIdx, 1)
       } else {
         // Materialized-from-recipe but not pinned — pin first, then move
@@ -217,9 +217,9 @@ export const useRecipesStore = defineStore('recipes', () => {
           recipe.source.kind === 'builtin'
             ? recipe.source.materialize(srcInst.params)
             : materializeInstances([srcInst])
-        const el = mat[elementType].find((e: any) => e?.name === elementName)
+        const el = mat[elementType].find((e) => (e as { name?: string })?.name === elementName)
         if (!el) return { rebound: 0, dangling: 0 }
-        elementData = JSON.parse(JSON.stringify(el))
+        elementData = structuredClone(el)
       }
     }
 
@@ -244,14 +244,14 @@ export const useRecipesStore = defineStore('recipes', () => {
     }
 
     // Wrap the single element in a minimal SchemaArrays, rewrite, then unwrap.
-    const singleArrays = {
-      variables: [] as any[],
-      classifiers: [] as any[],
-      generators: [] as any[],
-      contentRules: [] as any[],
-      functions: [] as any[],
+    const singleArrays: SchemaArrays = {
+      variables: [],
+      classifiers: [],
+      generators: [],
+      contentRules: [],
+      functions: [],
     }
-    singleArrays[elementType] = [elementData]
+    singleArrays[elementType] = [elementData!]
     const rewritten = rewriteIdentifiers(singleArrays, fromTo)
     const rewrittenElement = structuredClone(rewritten[elementType][0])
 
@@ -259,9 +259,9 @@ export const useRecipesStore = defineStore('recipes', () => {
     // Count remaining source-prefixed refs after rewrite.
     const escapedSrc = srcSlug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     const danglingRe = new RegExp(`\\b${escapedSrc}_\\w+\\b`, 'g')
-    function countDangling(obj: any): number {
+    function countDangling(obj: unknown): number {
       if (typeof obj === 'string') return (obj.match(danglingRe) ?? []).length
-      if (Array.isArray(obj)) return obj.reduce((acc, v) => acc + countDangling(v), 0)
+      if (Array.isArray(obj)) return obj.reduce((acc: number, v) => acc + countDangling(v), 0)
       if (obj && typeof obj === 'object') return Object.values(obj).reduce((acc: number, v) => acc + countDangling(v), 0)
       return 0
     }
@@ -328,7 +328,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     if (!inst) return ''
     const newId = crypto.randomUUID()
     instances.value.push({
-      ...JSON.parse(JSON.stringify(inst)),
+      ...structuredClone(inst),
       id: newId,
       name: inst.name + ' copy',
     })
@@ -353,11 +353,11 @@ export const useRecipesStore = defineStore('recipes', () => {
       recipe.source.kind === 'builtin'
         ? recipe.source.materialize(inst.params)
         : materializeInstances([inst])
-    const el = mat[elementType].find((e: any) => e?.name === elementName)
+    const el = mat[elementType].find((e) => (e as { name?: string })?.name === elementName)
     if (!el) return
     if (!inst.pinned.find((p) => p.elementType === elementType && p.elementName === elementName)) {
       const before = snapshotInstances()
-      inst.pinned.push({ elementType, elementName, override: JSON.parse(JSON.stringify(el)) })
+      inst.pinned.push({ elementType, elementName, override: structuredClone(el) })
       persist()
       const after = snapshotInstances()
       useUndoStore().push({
@@ -389,7 +389,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     })
   }
 
-  function updatePinnedElement(instanceId: string, elementType: ElementType, elementName: string, override: any): void {
+  function updatePinnedElement(instanceId: string, elementType: ElementType, elementName: string, override: AnyElement): void {
     const inst = instances.value.find((i) => i.id === instanceId)
     if (!inst) return
     const pinned = inst.pinned.find((p) => p.elementType === elementType && p.elementName === elementName)
@@ -447,7 +447,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     })
   }
 
-  function addExtra(instanceId: string, extrasPath: string, elementType: ElementType, element: any): void {
+  function addExtra(instanceId: string, extrasPath: string, elementType: ElementType, element: AnyElement): void {
     const inst = instances.value.find((i) => i.id === instanceId)
     if (!inst) return
     const before = snapshotInstances()

@@ -15,7 +15,7 @@ const def: RecipeDef = {
   tags: [],
   params: [],
   locals: { variables: [], classifiers: [], generators: [], functions: [] },
-  source: { kind: 'builtin', materialize: () => JSON.parse(JSON.stringify(empty)) },
+  source: { kind: 'builtin', materialize: () => structuredClone(empty) },
 }
 
 export default def

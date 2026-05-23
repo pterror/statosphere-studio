@@ -190,6 +190,7 @@ import { ref, computed, nextTick } from 'vue'
 import type { RecipeInstance, ElementType, ComposedRef } from '../recipes/types'
 import { getRecipe } from '../recipes/registry'
 import { materializeInstances } from '../recipes/materialize'
+import { emptyElement } from '../recipes/empty-element'
 import { useRecipesStore } from '../stores/recipes'
 import ElementRow from './ElementRow.vue'
 import ElementTypePicker from './ElementTypePicker.vue'
@@ -309,16 +310,8 @@ function updateChipList(key: string, chips: string[]) {
   updateParam(key, chips)
 }
 
-function emptyElement(et: ElementType): any {
-  if (et === 'variables') return { name: 'new_var', initialValue: '0' }
-  if (et === 'classifiers') return { name: 'NewClassifier', classifications: [{ label: 'an event', threshold: 0.65, updates: [] }] }
-  if (et === 'generators') return { name: 'NewGen', type: 'Text', prompt: '""', minTokens: 5, maxTokens: 40, phase: 'On Response' }
-  if (et === 'contentRules') return { category: 'Stage Direction', condition: 'true', modification: '""' }
-  return { name: 'newFn', body: '0' }
-}
-
 async function addElement(et: ElementType) {
-  const el = emptyElement(et)
+  const el = emptyElement(et, props.instance)
   recipesStore.addExtra(props.instance.id, '', et, el)
   emit('change')
   // Auto-expand the new row and focus first field

@@ -66,6 +66,7 @@ import { useConfigStore } from '../stores/config'
 import { useRecipesStore } from '../stores/recipes'
 import { useUndoStore } from '../stores/undo'
 import type { ElementType } from '../recipes/types'
+import { emptyElement } from '../recipes/empty-element'
 
 const emit = defineEmits<{
   (e: 'toggle-browse'): void
@@ -88,14 +89,6 @@ const hasErrors = computed(() => {
 
 const validityTitle = computed(() => hasErrors.value ? 'Config has validation errors' : 'Config is valid')
 
-function emptyElement(et: ElementType): any {
-  if (et === 'variables') return { name: 'new_var', initialValue: '0' }
-  if (et === 'classifiers') return { name: 'NewClassifier', classifications: [{ label: 'an event', threshold: 0.65, updates: [] }] }
-  if (et === 'generators') return { name: 'NewGen', type: 'Text', prompt: '""', minTokens: 5, maxTokens: 40, phase: 'On Response' }
-  if (et === 'contentRules') return { category: 'Stage Direction', condition: 'true', modification: '""' }
-  return { name: 'newFn', body: '0' }
-}
-
 async function addElement(et: ElementType) {
   let targetId = recipesStore.focusedInstanceId
   if (!targetId) {
@@ -111,7 +104,9 @@ async function addElement(et: ElementType) {
     }
   }
   if (!targetId) return
-  recipesStore.addExtra(targetId, '', et, emptyElement(et))
+  const targetInst = recipesStore.instances.find((i) => i.id === targetId)
+  if (!targetInst) return
+  recipesStore.addExtra(targetId, '', et, emptyElement(et, targetInst))
   configStore.markDirty()
   await nextTick()
   const blocks = document.querySelectorAll('[data-recipe-block]')

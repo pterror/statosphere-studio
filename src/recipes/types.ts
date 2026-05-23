@@ -1,9 +1,91 @@
+// ── Element update (shared by classifiers and generators) ────────────────────
+export interface ElementUpdate {
+  variable?: string
+  setTo?: string
+}
+
+// ── Classification entry inside a classifier ─────────────────────────────────
+export interface ClassificationEntry {
+  label?: string
+  condition?: string
+  category?: string
+  threshold?: number
+  dynamic?: boolean
+  updates?: ElementUpdate[]
+}
+
+// ── Discriminated element shapes ─────────────────────────────────────────────
+export interface VariableElement {
+  name: string
+  initialValue?: string
+  perTurnUpdate?: string
+  postInputUpdate?: string
+  preResponseUpdate?: string
+  postResponseUpdate?: string
+}
+
+export interface ClassifierElement {
+  name: string
+  condition?: string
+  dependencies?: string
+  inputTemplate?: string
+  inputHypothesis?: string
+  responseTemplate?: string
+  responseHypothesis?: string
+  useLlm?: boolean
+  useHistory?: boolean
+  historyContextSize?: number
+  classifications?: ClassificationEntry[]
+}
+
+export interface GeneratorElement {
+  name: string
+  type?: 'Text' | 'Image' | 'Image-to-Image'
+  phase?: string
+  lazy?: boolean
+  condition?: string
+  dependencies?: string
+  prompt?: string
+  updates?: ElementUpdate[]
+  // Text-only
+  includeHistory?: boolean
+  historyContextSize?: number
+  minTokens?: number | string
+  maxTokens?: number | string
+  retryCondition?: string
+  stoppingStrings?: string
+  // Image-only
+  negativePrompt?: string
+  removeBackground?: boolean
+  aspectRatio?: string
+  // Image-to-Image-only
+  sourceImageUrl?: string
+  imageToImageType?: string
+}
+
+export interface ContentRuleElement {
+  category?: string
+  condition?: string
+  modification?: string
+}
+
+export interface FunctionElement {
+  name: string
+  parameters?: string
+  body?: string
+}
+
+export type AnyElement = VariableElement | ClassifierElement | GeneratorElement | ContentRuleElement | FunctionElement
+
+// SchemaArrays uses AnyElement[] for all arrays so dynamic iteration over ELEMENT_TYPES
+// remains ergonomic.  Use the specific element types (VariableElement etc.) at call sites
+// where the kind is statically known.
 export type SchemaArrays = {
-  variables: any[]
-  classifiers: any[]
-  generators: any[]
-  contentRules: any[]
-  functions: any[]
+  variables: AnyElement[]
+  classifiers: AnyElement[]
+  generators: AnyElement[]
+  contentRules: AnyElement[]
+  functions: AnyElement[]
 }
 
 export type ParamSpec =
@@ -62,7 +144,7 @@ export interface RecipeDef {
 export interface PinnedElement {
   elementType: ElementType
   elementName: string
-  override: any
+  override: AnyElement
 }
 
 export interface RecipeInstance {

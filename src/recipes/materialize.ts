@@ -1,4 +1,4 @@
-import type { RecipeInstance, RecipeDef, SchemaArrays, ElementType, Substitution, Locals } from './types'
+import type { RecipeInstance, RecipeDef, SchemaArrays, ElementType, Substitution, Locals, AnyElement } from './types'
 import type { RenameMap } from './rewrite-refs'
 import { rewriteRefs } from './rewrite-refs'
 import { getRecipe } from './registry'
@@ -42,19 +42,20 @@ function applyRenameToNames(arrays: SchemaArrays, renameMap: RenameMap): SchemaA
   const result = structuredClone(arrays)
   for (const et of ['variables', 'classifiers', 'generators', 'functions'] as const) {
     const map = renameMap[et as keyof RenameMap]
-    result[et] = result[et].map((el: any) => {
-      if (!el || typeof el !== 'object' || typeof el.name !== 'string') return el
-      return { ...el, name: map[el.name] ?? el.name }
+    result[et] = result[et].map(el => {
+      const named = el as { name?: string }
+      if (!named || typeof named.name !== 'string') return el
+      return { ...el, name: map[named.name] ?? named.name }
     })
   }
   return result
 }
 
 // Walk a nested object/array by fieldPath and set the leaf to value.
-function setDeep(obj: any, path: string[], value: string): void {
-  let cur = obj
+function setDeep(obj: Record<string, unknown>, path: string[], value: string): void {
+  let cur: Record<string, unknown> = obj
   for (let i = 0; i < path.length - 1; i++) {
-    cur = cur?.[path[i]]
+    cur = cur?.[path[i]] as Record<string, unknown>
   }
   if (cur != null && path.length > 0) {
     cur[path[path.length - 1]] = value
@@ -68,18 +69,19 @@ export function interpretTemplate(
   substitutions: Substitution[],
   params: Record<string, unknown>,
 ): SchemaArrays {
-  const result: SchemaArrays = JSON.parse(JSON.stringify(template))
+  const result: SchemaArrays = structuredClone(template)
   for (const sub of substitutions) {
     const { elementType, index, fieldPath } = sub.path
     const arr = result[elementType]
     if (index < arr.length) {
       const val = params[sub.paramKey]
+      const el = arr[index] as Record<string, unknown>
       if (typeof val === 'string') {
-        setDeep(arr[index], fieldPath, val)
+        setDeep(el, fieldPath, val)
       } else if (Array.isArray(val)) {
-        setDeep(arr[index], fieldPath, val.join(', '))
+        setDeep(el, fieldPath, val.join(', '))
       } else if (val != null) {
-        setDeep(arr[index], fieldPath, String(val))
+        setDeep(el, fieldPath, String(val))
       }
     }
   }
@@ -96,7 +98,9 @@ export interface MaterializeOptions {
 
 // Derive locals from a template by reading names from each array.
 export function localsFromTemplate(template: SchemaArrays): Locals {
-  const names = (arr: any[]) => arr.map((el: any) => el?.name).filter((n: any) => typeof n === 'string' && n)
+  const names = (arr: AnyElement[]) => arr
+    .map(el => (el as { name?: string })?.name)
+    .filter((n): n is string => typeof n === 'string' && n.length > 0)
   return {
     variables: names(template.variables),
     classifiers: names(template.classifiers),
@@ -275,7 +279,7 @@ export function materializeInstances(instances: RecipeInstance[], opts: Material
       : localsFromTemplate(prefixed)
 
     // Build pinned map keyed by prefixed name.
-    const pinnedMap = new Map<string, any>()
+    const pinnedMap = new Map<string, AnyElement>()
     for (const p of inst.pinned) {
       pinnedMap.set(`${p.elementType}:${p.elementName}`, p.override)
     }
@@ -285,7 +289,8 @@ export function materializeInstances(instances: RecipeInstance[], opts: Material
 
     for (const et of ELEMENT_TYPES) {
       for (const el of prefixed[et]) {
-        const prefixedName = el?.name ?? ''
+        // ContentRuleElement has no `name`; only named elements are pinnable.
+        const prefixedName = (el as { name?: string })?.name ?? ''
         const pinned = pinnedMap.get(`${et}:${prefixedName}`)
         const resolved = pinned !== undefined ? pinned : el
         result[et].push(resolved)

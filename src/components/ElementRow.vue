@@ -104,7 +104,7 @@ function onEdit() {
   if (props.instanceId && !isPinned.value && elementName.value) {
     recipesStore.pinElement(props.instanceId, props.elementType, elementName.value)
   } else if (props.instanceId && isPinned.value && elementName.value) {
-    recipesStore.updatePinnedElement(props.instanceId, props.elementType, elementName.value, JSON.parse(JSON.stringify(props.element)))
+    recipesStore.updatePinnedElement(props.instanceId, props.elementType, elementName.value, structuredClone(props.element))
   }
   emit('change')
 }
