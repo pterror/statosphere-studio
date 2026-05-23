@@ -141,10 +141,11 @@
 
       <!-- Non-composed: flat element rows -->
       <template v-else>
-        <div class="divide-y" style="border-color: var(--glass-border)">
+        <!-- Pinned/editable rows (always shown when present) -->
+        <div v-if="pinnedCount > 0" class="divide-y" style="border-color: var(--glass-border)">
           <template v-for="et in ELEMENT_TYPES" :key="et">
             <ElementRow
-              v-for="(el, i) in allElements[et]"
+              v-for="(el, i) in pinnedElements[et]"
               :key="`${et}-${i}`"
               :ref="(r) => setRowRef(et, i, r)"
               :element-type="et"
@@ -153,8 +154,38 @@
               @change="emit('change')"
             />
           </template>
-          <div v-if="totalCount === 0" class="px-4 py-3 text-xs" style="color: var(--text-muted)">No elements</div>
         </div>
+
+        <!-- Inherited-contents invitation: recipe-contributed rows not yet pinned -->
+        <div v-if="hasInheritedRows" class="inherited-section" :class="pinnedCount > 0 ? 'inherited-section--with-divider' : ''">
+          <div class="inherited-heading px-4 py-1.5 text-xs" style="color: var(--text-muted)">
+            From recipe — click 📌 to customize
+          </div>
+          <div class="divide-y" style="border-color: var(--glass-border)">
+            <template v-for="et in ELEMENT_TYPES" :key="et">
+              <div
+                v-for="(el, i) in unpinnedRecipeElements[et]"
+                :key="`inh-${et}-${i}`"
+                class="flex items-center gap-2 px-3 py-1.5 inherited-row"
+              >
+                <span class="w-3 shrink-0"></span>
+                <span class="text-xs w-20 shrink-0 inherited-type-label">{{ TYPE_LABELS[et] }}</span>
+                <span class="text-sm truncate flex-1 inherited-name">{{ (el as any).name ?? (el as any).category ?? '(unnamed)' }}</span>
+                <button
+                  class="pin-btn pin-btn--idle shrink-0 outline-none"
+                  title="Pin to customize independently from recipe"
+                  aria-label="Pin element"
+                  tabindex="0"
+                  @click.stop="pinInherited(et, (el as any).name ?? (el as any).category ?? '')"
+                  @keydown.enter.stop="pinInherited(et, (el as any).name ?? (el as any).category ?? '')"
+                  @keydown.space.prevent.stop="pinInherited(et, (el as any).name ?? (el as any).category ?? '')"
+                >📌</button>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <div v-if="!hasInheritedRows && pinnedCount === 0 && !hasRootExtras" class="px-4 py-3 text-xs" style="color: var(--text-muted)">No elements</div>
       </template>
 
       <!-- Extra elements at root path (always shown at bottom) -->
@@ -289,6 +320,63 @@ const rootExtras = computed(() => props.instance.extrasByPath?.[''] ?? { variabl
 const hasRootExtras = computed(() =>
   ELEMENT_TYPES.some(et => (rootExtras.value[et]?.length ?? 0) > 0),
 )
+
+// Pure recipe elements — no extras, no pinned overrides applied.
+const recipeElements = computed(() => {
+  const synth: import('../recipes/types').RecipeInstance = {
+    id: props.instance.id,
+    recipeId: props.instance.recipeId,
+    name: props.instance.name,
+    params: props.instance.params,
+    pinned: [],
+    extrasByPath: {},
+  }
+  return materializeInstances([synth])
+})
+
+// Recipe elements that haven't been pinned yet.
+const unpinnedRecipeElements = computed(() => {
+  const pinnedSet = new Set(props.instance.pinned.map(p => `${p.elementType}:${p.elementName}`))
+  const result: import('../recipes/types').SchemaArrays = { variables: [], classifiers: [], generators: [], contentRules: [], functions: [] }
+  for (const et of ELEMENT_TYPES) {
+    for (const el of recipeElements.value[et]) {
+      const key = `${et}:${(el as any).name ?? (el as any).category ?? ''}`
+      if (!pinnedSet.has(key)) result[et].push(el)
+    }
+  }
+  return result
+})
+
+const hasInheritedRows = computed(() =>
+  ELEMENT_TYPES.some(et => unpinnedRecipeElements.value[et].length > 0),
+)
+
+// Pinned elements (shown in the editable section).
+const pinnedElements = computed(() => {
+  const result: import('../recipes/types').SchemaArrays = { variables: [], classifiers: [], generators: [], contentRules: [], functions: [] }
+  for (const p of props.instance.pinned) {
+    result[p.elementType].push(p.override)
+  }
+  return result
+})
+
+const pinnedCount = computed(() =>
+  ELEMENT_TYPES.reduce((sum, et) => sum + pinnedElements.value[et].length, 0),
+)
+
+const TYPE_LABELS: Record<import('../recipes/types').ElementType, string> = {
+  variables: 'var',
+  classifiers: 'classifier',
+  generators: 'generator',
+  contentRules: 'rule',
+  functions: 'function',
+}
+
+function pinInherited(et: import('../recipes/types').ElementType, name: string) {
+  if (!name) return
+  recipesStore.pinElement(props.instance.id, et, name)
+  emit('change')
+}
 
 const isFocused = computed(() => recipesStore.focusedInstanceId === props.instance.id)
 
@@ -445,5 +533,61 @@ function onExportUrl() { closeMenu(); emit('export-url', props.instance.id) }
 }
 :root[data-theme="light"] .rename-input {
   background: rgba(255, 255, 255, 0.60);
+}
+
+/* Inherited (read-only) contents invitation */
+.inherited-section--with-divider {
+  border-top: 1px solid var(--glass-border);
+}
+
+.inherited-heading {
+  font-style: italic;
+  letter-spacing: 0.01em;
+}
+
+.inherited-row {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.inherited-row:hover {
+  background: var(--glass-bg-hover);
+  opacity: 0.9;
+}
+
+.inherited-type-label {
+  color: var(--text-muted);
+}
+
+.inherited-name {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Reuse pin-btn styles from ElementRow — duplicated here for scoped access */
+.pin-btn {
+  font-size: 0.7rem;
+  line-height: 1;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 2px;
+  border-radius: 3px;
+  transition: opacity 120ms ease, filter 120ms ease;
+}
+.pin-btn--idle {
+  opacity: 0;
+  filter: grayscale(1);
+}
+.inherited-row:hover .pin-btn--idle,
+.pin-btn--idle:focus {
+  opacity: 0.5;
+}
+.pin-btn--idle:hover {
+  opacity: 0.85 !important;
+  filter: none;
+}
+.pin-btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 </style>

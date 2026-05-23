@@ -91,10 +91,11 @@
 
       <!-- Leaf: show materialized elements -->
       <template v-else>
-        <div class="divide-y" style="border-color: var(--glass-border)">
+        <!-- Pinned elements at this child's path (shown as editable) -->
+        <div v-if="childPinnedCount > 0" class="divide-y" style="border-color: var(--glass-border)">
           <template v-for="et in ELEMENT_TYPES" :key="et">
             <ElementRow
-              v-for="(el, i) in childElements[et]"
+              v-for="(el, i) in childPinnedElements[et]"
               :key="`${et}-${i}`"
               :element-type="et"
               :element="el"
@@ -102,8 +103,38 @@
               @change="emit('change')"
             />
           </template>
-          <div v-if="childElementCount === 0" class="px-4 py-2 text-xs" style="color: var(--text-muted)">No elements</div>
         </div>
+
+        <!-- Inherited-contents invitation: recipe-contributed rows not yet pinned -->
+        <div v-if="hasChildInheritedRows" class="inherited-section" :class="childPinnedCount > 0 ? 'inherited-section--with-divider' : ''">
+          <div class="inherited-heading px-3 py-1 text-xs" style="color: var(--text-muted)">
+            From recipe — click 📌 to customize
+          </div>
+          <div class="divide-y" style="border-color: var(--glass-border)">
+            <template v-for="et in ELEMENT_TYPES" :key="et">
+              <div
+                v-for="(el, i) in childUnpinnedElements[et]"
+                :key="`cinh-${et}-${i}`"
+                class="flex items-center gap-2 px-3 py-1.5 inherited-row"
+              >
+                <span class="w-3 shrink-0"></span>
+                <span class="text-xs w-20 shrink-0 inherited-type-label">{{ CHILD_TYPE_LABELS[et] }}</span>
+                <span class="text-sm truncate flex-1 inherited-name">{{ (el as any).name ?? (el as any).category ?? '(unnamed)' }}</span>
+                <button
+                  class="pin-btn pin-btn--idle shrink-0 outline-none"
+                  title="Pin to customize independently from recipe"
+                  aria-label="Pin element"
+                  tabindex="0"
+                  @click.stop="pinChildInherited(et, (el as any).name ?? (el as any).category ?? '')"
+                  @keydown.enter.stop="pinChildInherited(et, (el as any).name ?? (el as any).category ?? '')"
+                  @keydown.space.prevent.stop="pinChildInherited(et, (el as any).name ?? (el as any).category ?? '')"
+                >📌</button>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <div v-if="!hasChildInheritedRows && childPinnedCount === 0 && !hasPathExtras" class="px-4 py-2 text-xs" style="color: var(--text-muted)">No elements</div>
       </template>
 
       <!-- Extras at this child's path -->
@@ -222,6 +253,75 @@ const hasPathExtras = computed(() =>
   ELEMENT_TYPES.some(et => (pathExtras.value[et]?.length ?? 0) > 0),
 )
 
+// Recipe-only child elements (no pinned overrides applied) for the invitation section.
+const childRecipeElements = computed(() => {
+  if (!childDef.value || childDef.value.source.kind === 'composed') {
+    return { variables: [], classifiers: [], generators: [], contentRules: [], functions: [] } as import('../recipes/types').SchemaArrays
+  }
+  const synth: import('../recipes/types').RecipeInstance = {
+    id: props.instance.id + '_' + props.refIdPath.join('_') + '_recipe',
+    recipeId: props.refDef.recipeId,
+    name: props.refDef.defaultName,
+    params: resolvedParams.value,
+    pinned: [],
+    extrasByPath: {},
+  }
+  return materializeInstances([synth])
+})
+
+// Child recipe elements that haven't been pinned.
+const childUnpinnedElements = computed(() => {
+  const pinnedSet = new Set(props.instance.pinned.map(p => `${p.elementType}:${p.elementName}`))
+  const result: import('../recipes/types').SchemaArrays = { variables: [], classifiers: [], generators: [], contentRules: [], functions: [] }
+  for (const et of ELEMENT_TYPES) {
+    for (const el of childRecipeElements.value[et]) {
+      const key = `${et}:${(el as any).name ?? (el as any).category ?? ''}`
+      if (!pinnedSet.has(key)) result[et].push(el)
+    }
+  }
+  return result
+})
+
+const hasChildInheritedRows = computed(() =>
+  ELEMENT_TYPES.some(et => childUnpinnedElements.value[et].length > 0),
+)
+
+// Pinned elements that belong to this child (by element name in the child's materialized output).
+const childPinnedElements = computed(() => {
+  const childNames = new Set<string>()
+  for (const et of ELEMENT_TYPES) {
+    for (const el of childRecipeElements.value[et]) {
+      const n = (el as any).name ?? (el as any).category ?? ''
+      if (n) childNames.add(`${et}:${n}`)
+    }
+  }
+  const result: import('../recipes/types').SchemaArrays = { variables: [], classifiers: [], generators: [], contentRules: [], functions: [] }
+  for (const p of props.instance.pinned) {
+    if (childNames.has(`${p.elementType}:${p.elementName}`)) {
+      result[p.elementType].push(p.override)
+    }
+  }
+  return result
+})
+
+const childPinnedCount = computed(() =>
+  ELEMENT_TYPES.reduce((sum, et) => sum + childPinnedElements.value[et].length, 0),
+)
+
+const CHILD_TYPE_LABELS: Record<import('../recipes/types').ElementType, string> = {
+  variables: 'var',
+  classifiers: 'classifier',
+  generators: 'generator',
+  contentRules: 'rule',
+  functions: 'function',
+}
+
+function pinChildInherited(et: import('../recipes/types').ElementType, name: string) {
+  if (!name) return
+  recipesStore.pinElement(props.instance.id, et, name)
+  emit('change')
+}
+
 function emptyElement(et: ElementType): any {
   if (et === 'variables') return { name: 'new_var', initialValue: '0' }
   if (et === 'classifiers') return { name: 'NewClassifier', classifications: [{ label: 'an event', threshold: 0.65, updates: [] }] }
@@ -253,5 +353,60 @@ function addChildElement(et: ElementType) {
 /* Past depth 3: slightly reduce header font size */
 .composed-child--deep .glass-row {
   font-size: 0.9rem;
+}
+
+/* Inherited (read-only) contents invitation */
+.inherited-section--with-divider {
+  border-top: 1px solid var(--glass-border);
+}
+
+.inherited-heading {
+  font-style: italic;
+  letter-spacing: 0.01em;
+}
+
+.inherited-row {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.inherited-row:hover {
+  background: var(--glass-bg-hover);
+  opacity: 0.9;
+}
+
+.inherited-type-label {
+  color: var(--text-muted);
+}
+
+.inherited-name {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.pin-btn {
+  font-size: 0.7rem;
+  line-height: 1;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 2px;
+  border-radius: 3px;
+  transition: opacity 120ms ease, filter 120ms ease;
+}
+.pin-btn--idle {
+  opacity: 0;
+  filter: grayscale(1);
+}
+.inherited-row:hover .pin-btn--idle,
+.pin-btn--idle:focus {
+  opacity: 0.5;
+}
+.pin-btn--idle:hover {
+  opacity: 0.85 !important;
+  filter: none;
+}
+.pin-btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 </style>
