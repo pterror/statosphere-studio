@@ -109,6 +109,8 @@ export interface ValidationErrors {
   contentRules: string[]
 }
 
+let scratchTimer: ReturnType<typeof setTimeout> | null = null
+
 export const useConfigStore = defineStore('config', () => {
   const config = ref<ConfigTree>({
     variables: [],
@@ -152,6 +154,7 @@ export const useConfigStore = defineStore('config', () => {
       config.value = parsed
       dirty.value = true
       validate()
+      scheduleScratch()
       return null
     } catch (e) {
       return (e as Error).message
@@ -161,6 +164,7 @@ export const useConfigStore = defineStore('config', () => {
   function markDirty() {
     dirty.value = true
     validate()
+    scheduleScratch()
   }
 
   function markSaved() {
@@ -171,7 +175,24 @@ export const useConfigStore = defineStore('config', () => {
     config.value = data
     dirty.value = true
     validate()
+    scheduleScratch()
   }
 
-  return { config, dirty, errors, json, loadJson, loadTemplate, markDirty, markSaved, validate }
+  function replace(data: ConfigTree) {
+    config.value = data
+    dirty.value = false
+    validate()
+    scheduleScratch()
+  }
+
+  function scheduleScratch() {
+    if (scratchTimer !== null) clearTimeout(scratchTimer)
+    scratchTimer = setTimeout(async () => {
+      scratchTimer = null
+      const { useDraftsStore } = await import('./drafts')
+      useDraftsStore().saveScratch(config.value)
+    }, 500)
+  }
+
+  return { config, dirty, errors, json, loadJson, loadTemplate, replace, markDirty, markSaved, validate }
 })

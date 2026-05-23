@@ -6,6 +6,14 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import TopBar from './TopBar.vue'
 import Layout from './Layout.vue'
+import { hydrateFromLocation } from '../share/hydrate'
+
+onMounted(() => {
+  if (typeof window !== 'undefined') {
+    hydrateFromLocation()
+  }
+})
 </script>
