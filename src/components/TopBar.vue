@@ -96,7 +96,7 @@ function emptyElement(et: ElementType): any {
   return { name: 'newFn', body: '0' }
 }
 
-function addElement(et: ElementType) {
+async function addElement(et: ElementType) {
   let targetId = recipesStore.focusedInstanceId
   if (!targetId) {
     // Find or create a custom block at bottom
@@ -113,10 +113,14 @@ function addElement(et: ElementType) {
   if (!targetId) return
   recipesStore.addExtra(targetId, et, emptyElement(et))
   configStore.markDirty()
-  nextTick(() => {
-    const blocks = document.querySelectorAll('[data-recipe-block]')
-    blocks[blocks.length - 1]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-  })
+  await nextTick()
+  const blocks = document.querySelectorAll('[data-recipe-block]')
+  blocks[blocks.length - 1]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  // Focus first field in the new drawer after it expands
+  await nextTick()
+  const lastBlock = blocks[blocks.length - 1] as HTMLElement | undefined
+  const firstField = lastBlock?.querySelector<HTMLElement>('input, textarea, select')
+  firstField?.focus()
 }
 
 async function copyJson() {

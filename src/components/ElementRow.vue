@@ -6,10 +6,14 @@
     >
       <span
         v-if="dragSource"
-        class="text-gray-700 hover:text-gray-400 cursor-grab active:cursor-grabbing shrink-0 select-none text-xs"
+        class="drag-handle text-gray-400 hover:text-gray-200 focus:text-gray-200 cursor-grab active:cursor-grabbing shrink-0 select-none text-xs outline-none"
         title="Drag to move to another block"
+        role="button"
+        tabindex="0"
+        aria-label="Move element to another block"
         v-bind="dragSource"
         @click.stop
+        @keydown="onDragHandleKeydown"
       >⠿</span>
       <span class="text-xs text-gray-500 w-20 shrink-0">{{ typeLabel }}</span>
       <span class="text-sm text-gray-200 truncate flex-1">{{ displayName }}</span>
@@ -54,6 +58,7 @@ const props = defineProps<{
   element: any
   instanceId?: string
   initialExpanded?: boolean
+  extrasIndex?: number
 }>()
 const emit = defineEmits<{ change: [] }>()
 
@@ -110,5 +115,22 @@ function unpin() {
   }
 }
 
+function onDragHandleKeydown(e: KeyboardEvent) {
+  if (!(e.metaKey || e.ctrlKey)) return
+  if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
+  if (!props.instanceId || props.extrasIndex === undefined) return
+  e.preventDefault()
+  e.stopPropagation()
+  const delta = e.key === 'ArrowUp' ? -1 : 1
+  recipesStore.reorderElement(props.instanceId, props.elementType, props.extrasIndex, props.extrasIndex + delta)
+}
+
 defineExpose({ expand: () => { expanded.value = true } })
 </script>
+
+<style scoped>
+.drag-handle:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent-soft);
+  border-radius: 2px;
+}
+</style>

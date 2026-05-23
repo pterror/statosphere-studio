@@ -13,10 +13,14 @@
     >
       <!-- Grip handle -->
       <span
-        class="text-gray-600 hover:text-gray-300 cursor-grab active:cursor-grabbing shrink-0 select-none"
+        class="grip-handle text-gray-400 hover:text-gray-200 focus:text-gray-200 cursor-grab active:cursor-grabbing shrink-0 select-none outline-none"
         title="Drag to reorder"
+        role="button"
+        tabindex="0"
+        aria-label="Reorder recipe block"
         v-bind="gripDrag"
         @click.stop
+        @keydown="onGripKeydown"
       >≡</span>
       <!-- Inline rename -->
       <input
@@ -160,6 +164,7 @@
             :element-type="et"
             :element="el"
             :instance-id="instance.id"
+            :extras-index="i"
             @change="emit('change')"
           />
         </template>
@@ -310,16 +315,33 @@ function emptyElement(et: ElementType): any {
   return { name: 'newFn', body: '0' }
 }
 
-function addElement(et: ElementType) {
+async function addElement(et: ElementType) {
   const el = emptyElement(et)
   recipesStore.addExtra(props.instance.id, et, el)
   emit('change')
-  // Auto-expand the new row
-  nextTick(() => {
-    const count = props.instance.extras[et].length - 1
-    const key = `${et}-${count}`
-    extraRowRefs.value[key]?.expand()
-  })
+  // Auto-expand the new row and focus first field
+  await nextTick()
+  const count = props.instance.extras[et].length - 1
+  const key = `${et}-${count}`
+  const rowComp = extraRowRefs.value[key]
+  rowComp?.expand()
+  await nextTick()
+  const rowEl = rowComp?.$el as HTMLElement | undefined
+  const firstField = rowEl?.querySelector<HTMLElement>('input, textarea, select')
+  firstField?.focus()
+}
+
+function onGripKeydown(e: KeyboardEvent) {
+  if (!(e.metaKey || e.ctrlKey)) return
+  if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
+  e.preventDefault()
+  e.stopPropagation()
+  const idx = recipesStore.instances.findIndex((i) => i.id === props.instance.id)
+  if (idx === -1) return
+  const delta = e.key === 'ArrowUp' ? -1 : 1
+  const newIndex = idx + delta
+  if (newIndex < 0 || newIndex >= recipesStore.instances.length) return
+  recipesStore.reorderInstance(props.instance.id, newIndex)
 }
 
 function onBlockMousedown() {
@@ -347,6 +369,10 @@ function onExportUrl() { closeMenu(); emit('export-url', props.instance.id) }
 </script>
 
 <style scoped>
+.grip-handle:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent-soft);
+  border-radius: 2px;
+}
 .param-input {
   @apply rounded px-1.5 py-0.5 text-xs outline-none;
   background: rgba(0, 0, 0, 0.15);

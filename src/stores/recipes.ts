@@ -413,6 +413,25 @@ export const useRecipesStore = defineStore('recipes', () => {
     })
   }
 
+  function reorderElement(instanceId: string, elementType: ElementType, fromIndex: number, toIndex: number): void {
+    const inst = instances.value.find((i) => i.id === instanceId)
+    if (!inst) return
+    const arr = inst.extras[elementType]
+    if (fromIndex < 0 || fromIndex >= arr.length) return
+    const clamped = Math.max(0, Math.min(toIndex, arr.length - 1))
+    if (clamped === fromIndex) return
+    const before = snapshotInstances()
+    const [el] = arr.splice(fromIndex, 1)
+    arr.splice(clamped, 0, el)
+    persist()
+    const after = snapshotInstances()
+    useUndoStore().push({
+      label: `Reorder element in "${inst.name}"`,
+      do: () => { restoreInstances(after) },
+      undo: () => { restoreInstances(before) },
+    })
+  }
+
   function addExtra(instanceId: string, elementType: ElementType, element: any): void {
     const inst = instances.value.find((i) => i.id === instanceId)
     if (!inst) return
@@ -485,6 +504,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     focusedInstanceId,
     addInstance,
     reorderInstance,
+    reorderElement,
     addComposedRefToInstance,
     moveElement,
     removeInstance,
