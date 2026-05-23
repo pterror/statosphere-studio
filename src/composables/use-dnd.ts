@@ -20,10 +20,10 @@ export function makeDragSource(payload: DragPayload, opts?: { ghostText?: string
     if (opts?.ghostText) {
       const ghost = document.createElement('div')
       ghost.textContent = opts.ghostText
-      ghost.style.cssText = 'position:absolute;left:-9999px;top:-9999px;padding:4px 8px;background:#1e1b4b;color:#c7d2fe;border-radius:4px;font-size:12px;'
+      ghost.className = 'dnd-ghost'
       document.body.appendChild(ghost)
       e.dataTransfer.setDragImage(ghost, 0, 0)
-      requestAnimationFrame(() => ghost.remove())
+      setTimeout(() => ghost.remove(), 0)
     }
     currentDrag.value = payload
   }

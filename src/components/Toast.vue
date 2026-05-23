@@ -12,7 +12,7 @@
         <div
           v-for="item in toastStore.items"
           :key="item.id"
-          class="glass-panel flex items-center gap-3 text-sm px-4 py-2 pointer-events-auto min-w-[220px]"
+          class="toast-item glass-panel flex items-center gap-3 text-sm px-4 py-2 pointer-events-auto min-w-[220px]"
           style="color: var(--text-primary)"
         >
           <span>{{ item.message }}</span>
@@ -47,6 +47,12 @@ function onAction(item: ToastItem) {
 </script>
 
 <style scoped>
+.toast-item {
+  max-width: min(480px, calc(100vw - 32px));
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
 .toast-enter-active,
 .toast-leave-active {
   transition: opacity 150ms ease, transform 150ms ease;

@@ -1,5 +1,5 @@
 <template>
-  <div class="shrink-0" :class="fullscreen ? 'fixed inset-0 z-50 flex flex-col glass-panel' : 'glass-bar'">
+  <div class="shrink-0 json-footer" :class="fullscreen ? 'fixed inset-0 z-50 flex flex-col glass-panel' : 'glass-bar'">
     <!-- Collapsed preview bar -->
     <div
       class="flex items-center gap-2 px-3 py-1 cursor-pointer select-none"
@@ -62,3 +62,19 @@ function onInput(e: Event) {
   parseError.value = err
 }
 </script>
+
+<style scoped>
+/* On narrow viewports, expanded JSON footer goes full-viewport */
+@media (max-width: 600px) {
+  .json-footer:has(textarea) {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+  }
+}
+</style>

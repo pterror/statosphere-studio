@@ -7,46 +7,70 @@
   >
     <!-- Header -->
     <div
-      class="flex items-center gap-2 px-4 py-2 cursor-pointer hover:bg-[var(--glass-bg-hover)] rounded-t-[12px]"
+      class="block-header px-4 py-2 cursor-pointer hover:bg-[var(--glass-bg-hover)] rounded-t-[12px]"
       style="border-bottom: 1px solid var(--glass-border)"
       @click="collapsed = !collapsed"
     >
-      <!-- Grip handle -->
-      <span
-        class="grip-handle text-gray-400 hover:text-gray-200 focus:text-gray-200 cursor-grab active:cursor-grabbing shrink-0 select-none outline-none"
-        title="Drag to reorder"
-        role="button"
-        tabindex="0"
-        aria-label="Reorder recipe block"
-        v-bind="gripDrag"
-        @click.stop
-        @keydown="onGripKeydown"
-      >≡</span>
-      <!-- Inline rename -->
-      <input
-        v-if="isRenaming"
-        ref="renameInputRef"
-        v-model="renameValue"
-        type="text"
-        class="rename-input text-sm font-medium"
-        @keydown.enter.prevent="commitRename"
-        @keydown.esc.prevent="cancelRename"
-        @blur="commitRename"
-        @click.stop
-      />
-      <span
-        v-else
-        class="text-sm font-medium text-gray-100 cursor-text hover:text-white"
-        title="Click to rename"
-        @click.stop="beginRename"
-        tabindex="0"
-        @keydown.enter.prevent="beginRename"
-        @keydown.space.prevent="beginRename"
-      >{{ instance.name }}</span>
-      <span class="text-xs text-gray-500">{{ recipeName }}</span>
+      <!-- First row: grip + name + recipe label + collapse + ⋯ -->
+      <div class="flex items-center gap-2">
+        <!-- Grip handle -->
+        <span
+          class="grip-handle text-gray-400 hover:text-gray-200 focus:text-gray-200 cursor-grab active:cursor-grabbing shrink-0 select-none outline-none"
+          title="Drag to reorder"
+          role="button"
+          tabindex="0"
+          aria-label="Reorder recipe block"
+          v-bind="gripDrag"
+          @click.stop
+          @keydown="onGripKeydown"
+        >≡</span>
+        <!-- Inline rename -->
+        <input
+          v-if="isRenaming"
+          ref="renameInputRef"
+          v-model="renameValue"
+          type="text"
+          class="rename-input text-sm font-medium"
+          @keydown.enter.prevent="commitRename"
+          @keydown.esc.prevent="cancelRename"
+          @blur="commitRename"
+          @click.stop
+        />
+        <span
+          v-else
+          class="text-sm font-medium text-gray-100 cursor-text hover:text-white"
+          title="Click to rename"
+          @click.stop="beginRename"
+          tabindex="0"
+          @keydown.enter.prevent="beginRename"
+          @keydown.space.prevent="beginRename"
+        >{{ instance.name }}</span>
+        <span class="text-xs text-gray-500">{{ recipeName }}</span>
 
-      <!-- Params row (always visible) -->
-      <div v-if="def && def.params.length > 0" class="flex items-center gap-3 ml-2 flex-wrap" @click.stop>
+        <span class="text-gray-600 text-xs ml-auto mr-2">{{ collapsed ? '▶' : '▼' }}</span>
+        <!-- Block menu -->
+        <div class="relative" @click.stop>
+          <button
+            ref="menuTriggerRef"
+            class="text-gray-500 hover:text-gray-300 text-sm px-1"
+            @click.stop="toggleMenu"
+            title="More options"
+          >⋯</button>
+          <Popover v-model:open="menuOpen" :anchor="menuTriggerRef" placement="below-right" :roving="true">
+            <div class="glass-panel py-1 min-w-[160px]" style="border-radius: 10px">
+              <button role="menuitem" class="block w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-hover)]" style="color: var(--text-secondary)" @click="onRename">Rename</button>
+              <button role="menuitem" class="block w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-hover)]" style="color: var(--text-secondary)" @click="onDuplicate">Duplicate</button>
+              <button role="menuitem" class="block w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-hover)]" style="color: var(--text-secondary)" @click="onPromote">Promote to recipe…</button>
+              <button role="menuitem" class="block w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-hover)]" style="color: var(--text-secondary)" @click="onExportUrl">Export as URL</button>
+              <div class="my-1" style="border-top: 1px solid var(--glass-border)" />
+              <button role="menuitem" class="block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-[var(--glass-bg-hover)]" @click="onRemove">Remove</button>
+            </div>
+          </Popover>
+        </div>
+      </div>
+
+      <!-- Params row (wraps to second row on narrow screens) -->
+      <div v-if="def && def.params.length > 0" class="flex items-center gap-3 mt-1 flex-wrap" @click.stop>
         <template v-for="p in def.params" :key="p.key">
           <div class="flex items-center gap-1">
             <span class="text-xs text-gray-600">{{ p.label }}</span>
@@ -86,27 +110,6 @@
             />
           </div>
         </template>
-      </div>
-
-      <span class="text-gray-600 text-xs ml-auto mr-2">{{ collapsed ? '▶' : '▼' }}</span>
-      <!-- Block menu -->
-      <div class="relative" @click.stop>
-        <button
-          ref="menuTriggerRef"
-          class="text-gray-500 hover:text-gray-300 text-sm px-1"
-          @click.stop="toggleMenu"
-          title="More options"
-        >⋯</button>
-        <Popover v-model:open="menuOpen" :anchor="menuTriggerRef" placement="below-right" :roving="true">
-          <div class="glass-panel py-1 min-w-[160px]" style="border-radius: 10px">
-            <button role="menuitem" class="block w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-hover)]" style="color: var(--text-secondary)" @click="onRename">Rename</button>
-            <button role="menuitem" class="block w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-hover)]" style="color: var(--text-secondary)" @click="onDuplicate">Duplicate</button>
-            <button role="menuitem" class="block w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-hover)]" style="color: var(--text-secondary)" @click="onPromote">Promote to recipe…</button>
-            <button role="menuitem" class="block w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-hover)]" style="color: var(--text-secondary)" @click="onExportUrl">Export as URL</button>
-            <div class="my-1" style="border-top: 1px solid var(--glass-border)" />
-            <button role="menuitem" class="block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-[var(--glass-bg-hover)]" @click="onRemove">Remove</button>
-          </div>
-        </Popover>
       </div>
     </div>
 
@@ -364,6 +367,12 @@ function onExportUrl() { closeMenu(); emit('export-url', props.instance.id) }
 </script>
 
 <style scoped>
+.block-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
 .grip-handle:focus-visible {
   box-shadow: 0 0 0 2px var(--accent-soft);
   border-radius: 2px;

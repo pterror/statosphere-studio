@@ -1,7 +1,7 @@
 <template>
-  <header class="glass-bar flex items-center gap-2 px-4 py-2 shrink-0">
+  <header class="glass-bar flex items-center flex-wrap gap-2 px-4 py-2 shrink-0">
     <span class="font-semibold text-indigo-400 mr-auto">Statosphere Studio</span>
-    <button class="btn-action" @click="emit('toggle-browse')">Browse ▾</button>
+    <button class="btn-action topbar-collapse" @click="emit('toggle-browse')">Browse ▾</button>
     <button
       class="btn-action"
       :class="!undoStore.canUndo ? 'opacity-40 cursor-not-allowed' : ''"
@@ -36,10 +36,12 @@
           <DropdownMenuItem class="menu-item">
             <SaveMenu />
           </DropdownMenuItem>
+          <DropdownMenuItem class="menu-item menu-item-narrow-only" @click="settingsOpen = true">Settings</DropdownMenuItem>
+          <DropdownMenuItem class="menu-item menu-item-narrow-only" @click="emit('toggle-browse')">Browse</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenuPortal>
     </DropdownMenuRoot>
-    <button class="btn-action" title="Settings" @click="settingsOpen = true">⚙</button>
+    <button class="btn-action topbar-collapse" title="Settings" @click="settingsOpen = true">⚙</button>
     <ShareDialog v-model:open="shareOpen" />
     <ImportDialog v-model:open="importOpen" />
     <SettingsModal v-model:open="settingsOpen" />
@@ -173,5 +175,22 @@ onUnmounted(() => window.removeEventListener('keydown', onGlobalKeydown))
 .menu-item:hover {
   background: var(--glass-bg-hover);
   color: var(--text-primary);
+}
+
+/* Responsive: hide non-essential top-bar items below 600px */
+@media (max-width: 600px) {
+  .topbar-collapse {
+    display: none;
+  }
+}
+
+/* Show Settings/Browse ⋯ entries only on narrow screens */
+.menu-item-narrow-only {
+  display: none;
+}
+@media (max-width: 600px) {
+  .menu-item-narrow-only {
+    display: block;
+  }
 }
 </style>

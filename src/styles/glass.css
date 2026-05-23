@@ -105,6 +105,20 @@ body {
   box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
+.dnd-ghost {
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
+  padding: 6px 10px;
+  background: var(--glass-bg-strong);
+  color: var(--text-primary);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;

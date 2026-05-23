@@ -290,23 +290,23 @@ onMounted(() => {
 
 .card-grid {
   @apply grid gap-3 px-4 overflow-y-auto;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));
 }
 
 .recipe-library.inline .card-grid {
   @apply px-0;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
   max-height: calc(100vh - 280px);
 }
 
 .recipe-library.strip .card-grid {
   max-height: 50vh;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr));
 }
 
 .recipe-library.modal .card-grid {
   max-height: 55vh;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));
 }
 
 .recipe-card {

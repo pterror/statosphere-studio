@@ -38,7 +38,7 @@
         @dragenter="onCanvasDragEnter"
         @dragleave="onCanvasFileDragLeave"
       >
-        <div class="flex flex-col p-4">
+        <div class="flex flex-col canvas-blocks-inner p-4">
           <!-- Top drop zone -->
           <DropZone
             :index="0"
@@ -299,5 +299,11 @@ const DropZone = defineComponent({
 <style scoped>
 .add-recipe-footer-card {
   @apply w-full py-3 rounded-lg border border-dashed border-gray-700 text-gray-500 text-sm hover:border-indigo-500/50 hover:text-indigo-400 transition-colors;
+}
+
+@media (max-width: 480px) {
+  .canvas-blocks-inner {
+    padding: 0.5rem;
+  }
 }
 </style>

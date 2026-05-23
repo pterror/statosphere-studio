@@ -1,11 +1,30 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-echo "Running bun run build..."
 cd "$(git rev-parse --show-toplevel)"
-bun run build
 
-echo "Running bun run lint..."
-bun run lint
+if command -v nix &>/dev/null && [ -f flake.nix ]; then
+  RUN() { nix develop --command "$@"; }
+else
+  RUN() { "$@"; }
+fi
+
+echo "Running typecheck..."
+RUN bun run typecheck
+
+echo "Running build..."
+RUN bun run build
+
+echo "Running validate-recipes..."
+RUN bun run scripts/validate-recipes.ts
+
+echo "Running check-share-roundtrip..."
+RUN bun run scripts/check-share-roundtrip.ts
+
+echo "Running check-recipe-roundtrip..."
+RUN bun run scripts/check-recipe-roundtrip.ts
+
+echo "Running check-lints..."
+RUN bun run scripts/check-lints.ts
 
 echo "Pre-commit checks passed!"
