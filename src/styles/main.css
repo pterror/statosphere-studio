@@ -1,3 +1,39 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --bg-base: #030712;
+  --bg-surface: #111827;
+  --bg-raised: #1f2937;
+  --border: #374151;
+  --text-primary: #f3f4f6;
+  --text-muted: #9ca3af;
+  --text-faint: #6b7280;
+  --accent: #6366f1;
+}
+
+[data-theme="light"] {
+  --bg-base: #f9fafb;
+  --bg-surface: #ffffff;
+  --bg-raised: #f3f4f6;
+  --border: #d1d5db;
+  --text-primary: #111827;
+  --text-muted: #4b5563;
+  --text-faint: #9ca3af;
+  --accent: #4f46e5;
+
+  color-scheme: light;
+}
+
+[data-theme="light"] .bg-gray-950 { background-color: var(--bg-base) !important; }
+[data-theme="light"] .bg-gray-900 { background-color: var(--bg-surface) !important; }
+[data-theme="light"] .bg-gray-800 { background-color: var(--bg-raised) !important; }
+[data-theme="light"] .border-gray-800,
+[data-theme="light"] .border-gray-700 { border-color: var(--border) !important; }
+[data-theme="light"] .text-gray-100 { color: var(--text-primary) !important; }
+[data-theme="light"] .text-gray-200 { color: var(--text-primary) !important; }
+[data-theme="light"] .text-gray-300 { color: var(--text-muted) !important; }
+[data-theme="light"] .text-gray-400 { color: var(--text-faint) !important; }
+[data-theme="light"] .text-green-300 { color: #047857 !important; }
+

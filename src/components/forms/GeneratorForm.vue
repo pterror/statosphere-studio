@@ -1,14 +1,27 @@
 <template>
   <div class="flex flex-col gap-3">
-    <FieldRow label="Name" section="generators" field="name">
-      <input v-model="item.name" class="field-input" @input="emit('change')" />
+    <!-- Header row -->
+    <div class="flex gap-2 items-end">
+      <div class="flex flex-col gap-0.5 flex-1">
+        <label class="text-xs text-gray-500">Name</label>
+        <input v-model="item.name" class="field-input" @input="emit('change')" />
+      </div>
+      <div class="flex flex-col gap-0.5">
+        <label class="text-xs text-gray-500">Type</label>
+        <EnumChoice v-model="item.type" :options="typeOptions" @update:model-value="emit('change')" />
+      </div>
+      <div class="flex flex-col gap-0.5">
+        <label class="text-xs text-gray-500">Phase</label>
+        <EnumChoice v-model="item.phase" :options="phaseOptions" @update:model-value="emit('change')" />
+      </div>
+      <button class="text-xs text-gray-500 hover:text-gray-300 px-1 shrink-0" @click="showAdvanced = !showAdvanced">{{ showAdvanced ? '▲ less' : '▼ more' }}</button>
+    </div>
+
+    <FieldRow label="Prompt" section="generators" field="prompt">
+      <ExpressionField v-model="item.prompt" :rows="5" @update:model-value="emit('change')" />
     </FieldRow>
-    <FieldRow label="Type" section="generators" field="type">
-      <EnumChoice v-model="item.type" :options="typeOptions" @update:model-value="emit('change')" />
-    </FieldRow>
-    <FieldRow label="Phase" section="generators" field="phase">
-      <EnumChoice v-model="item.phase" :options="phaseOptions" @update:model-value="emit('change')" />
-    </FieldRow>
+
+    <template v-if="showAdvanced">
     <FieldRow label="Lazy" section="generators" field="lazy">
       <input type="checkbox" v-model="item.lazy" @change="emit('change')" class="w-4 h-4" />
     </FieldRow>
@@ -18,11 +31,9 @@
     <FieldRow label="Dependencies" section="generators" field="dependencies">
       <input v-model="item.dependencies" class="field-input" @input="emit('change')" />
     </FieldRow>
-    <FieldRow label="Prompt" section="generators" field="prompt">
-      <ExpressionField v-model="item.prompt" :rows="5" @update:model-value="emit('change')" />
-    </FieldRow>
+    </template>
 
-    <template v-if="item.type === 'Text'">
+    <template v-if="showAdvanced && item.type === 'Text'">
       <FieldRow label="Include History" section="generators" field="includeHistory">
         <input type="checkbox" v-model="item.includeHistory" @change="emit('change')" class="w-4 h-4" />
       </FieldRow>
@@ -43,7 +54,7 @@
       </FieldRow>
     </template>
 
-    <template v-if="item.type === 'Image'">
+    <template v-if="showAdvanced && item.type === 'Image'">
       <FieldRow label="Negative Prompt" section="generators" field="negativePrompt">
         <input v-model="item.negativePrompt" class="field-input" @input="emit('change')" />
       </FieldRow>
@@ -59,7 +70,7 @@
       </FieldRow>
     </template>
 
-    <template v-if="item.type === 'Image-to-Image'">
+    <template v-if="showAdvanced && item.type === 'Image-to-Image'">
       <FieldRow label="Remove Background" section="generators" field="removeBackground">
         <input type="checkbox" v-model="item.removeBackground" @change="emit('change')" class="w-4 h-4" />
       </FieldRow>
@@ -89,14 +100,17 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import type { Generator } from '../../stores/config'
 import FieldRow from '../sections/FieldRow.vue'
 import ExpressionField from '../widgets/ExpressionField.vue'
 import EnumChoice from '../widgets/EnumChoice.vue'
 import KeyValueList from '../widgets/KeyValueList.vue'
+import { useSettingsStore } from '../../stores/settings'
 
 defineProps<{ item: Generator }>()
 const emit = defineEmits<{ change: [] }>()
+const showAdvanced = ref(useSettingsStore().defaultExpandAdvanced)
 
 const typeOptions = [
   { value: 'Text', label: 'Text', description: 'Sends a prompt to the LLM and stores the reply.' },

@@ -1,33 +1,49 @@
 <template>
-  <div class="flex flex-col gap-3">
-    <FieldRow label="Name" section="variables" field="name">
-      <input v-model="item.name" class="field-input" @input="emit('change')" />
-    </FieldRow>
-    <FieldRow label="Initial Value" section="variables" field="initialValue">
-      <ExpressionField v-model="item.initialValue" :rows="2" @update:model-value="emit('change')" />
-    </FieldRow>
-    <FieldRow label="Initial Input Update" section="variables" field="perTurnUpdate">
-      <ExpressionField v-model="item.perTurnUpdate" :rows="2" @update:model-value="emit('change')" />
-    </FieldRow>
-    <FieldRow label="Final Input Update" section="variables" field="postInputUpdate">
-      <ExpressionField v-model="item.postInputUpdate" :rows="2" @update:model-value="emit('change')" />
-    </FieldRow>
-    <FieldRow label="Initial Response Update" section="variables" field="preResponseUpdate">
-      <ExpressionField v-model="item.preResponseUpdate" :rows="2" @update:model-value="emit('change')" />
-    </FieldRow>
-    <FieldRow label="Final Response Update" section="variables" field="postResponseUpdate">
-      <ExpressionField v-model="item.postResponseUpdate" :rows="2" @update:model-value="emit('change')" />
-    </FieldRow>
+  <div class="flex flex-col gap-2">
+    <!-- Core: single row -->
+    <div class="flex gap-2 items-end">
+      <div class="flex flex-col gap-0.5 flex-1 min-w-0">
+        <label class="text-xs text-gray-500">Name</label>
+        <input v-model="item.name" class="field-input" placeholder="name" @input="emit('change')" />
+      </div>
+      <div class="flex flex-col gap-0.5 flex-1 min-w-0">
+        <label class="text-xs text-gray-500">Initial value</label>
+        <input v-model="item.initialValue" class="field-input" placeholder="initial value" @input="emit('change')" />
+      </div>
+      <div class="flex flex-col gap-0.5 flex-1 min-w-0">
+        <label class="text-xs text-gray-500">Per-turn update</label>
+        <input v-model="item.perTurnUpdate" class="field-input" placeholder="per-turn update" @input="emit('change')" />
+      </div>
+      <button class="text-xs text-gray-500 hover:text-gray-300 px-1 shrink-0" :title="showAdvanced ? 'Hide advanced' : 'Show advanced'" @click="showAdvanced = !showAdvanced">{{ showAdvanced ? '▲' : '▼' }}</button>
+    </div>
+
+    <!-- Advanced: collapsible -->
+    <template v-if="showAdvanced">
+      <FieldRow label="Final Input Update" section="variables" field="postInputUpdate">
+        <ExpressionField v-model="item.postInputUpdate" :rows="2" @update:model-value="emit('change')" />
+      </FieldRow>
+      <FieldRow label="Initial Response Update" section="variables" field="preResponseUpdate">
+        <ExpressionField v-model="item.preResponseUpdate" :rows="2" @update:model-value="emit('change')" />
+      </FieldRow>
+      <FieldRow label="Final Response Update" section="variables" field="postResponseUpdate">
+        <ExpressionField v-model="item.postResponseUpdate" :rows="2" @update:model-value="emit('change')" />
+      </FieldRow>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import type { Variable } from '../../stores/config'
 import FieldRow from '../sections/FieldRow.vue'
 import ExpressionField from '../widgets/ExpressionField.vue'
+import { useSettingsStore } from '../../stores/settings'
 
 defineProps<{ item: Variable }>()
 const emit = defineEmits<{ change: [] }>()
+
+const settings = useSettingsStore()
+const showAdvanced = ref(settings.defaultExpandAdvanced)
 </script>
 
 <style scoped>

@@ -55,13 +55,15 @@ import {
 } from 'reka-ui'
 import { decodeConfig } from '../share/encode'
 import { decodeRecipe } from '../share/recipe-encode'
-import { fetchAndParse, DEFAULT_TRUSTED_PREFIXES } from '../share/url-loader'
+import { fetchAndParse } from '../share/url-loader'
 import { useConfigStore } from '../stores/config'
 import { useRecipesStore } from '../stores/recipes'
+import { useSettingsStore } from '../stores/settings'
 
 const open = defineModel<boolean>('open', { default: false })
 const configStore = useConfigStore()
 const recipesStore = useRecipesStore()
+const settingsStore = useSettingsStore()
 const input = ref('')
 const error = ref('')
 
@@ -81,7 +83,7 @@ async function doUrlImport() {
   if (!url) return
 
   // Pre-check trust before attempting fetch
-  const trusted = DEFAULT_TRUSTED_PREFIXES.some((p) => url.startsWith(p))
+  const trusted = settingsStore.trustedPrefixes.some((p) => url.startsWith(p))
   if (!trusted && !bypassTrust.value) {
     urlUntrustedWarning.value = true
     urlError.value = 'URL host not in trusted-prefix list'
@@ -90,7 +92,7 @@ async function doUrlImport() {
 
   urlLoading.value = true
   try {
-    const result = await fetchAndParse(url, { allowUntrusted: bypassTrust.value || trusted })
+    const result = await fetchAndParse(url, { allowUntrusted: bypassTrust.value || trusted, trustedPrefixes: settingsStore.trustedPrefixes })
     if (result.kind === 'config' || result.kind === 'hash-config') {
       configStore.replace(result.data)
       urlSuccess.value = 'Config loaded.'

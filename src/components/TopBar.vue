@@ -18,16 +18,19 @@
           <DropdownMenuItem class="menu-item" @click="copyJson">Copy JSON</DropdownMenuItem>
           <DropdownMenuItem class="menu-item" @click="downloadJson">Download .json</DropdownMenuItem>
           <DropdownMenuItem class="menu-item" @click="shareOpen = true">Share</DropdownMenuItem>
+          <DropdownMenuItem class="menu-item" @click="graphOpen = true">Graph</DropdownMenuItem>
           <DropdownMenuItem class="menu-item">
             <SaveMenu />
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenuPortal>
     </DropdownMenuRoot>
-    <button class="btn-action" title="Settings (coming in v2.4)" @click="onSettings">⚙</button>
+    <button class="btn-action" title="Settings" @click="settingsOpen = true">⚙</button>
     <ShareDialog v-model:open="shareOpen" />
     <ImportDialog v-model:open="importOpen" />
     <AddRecipeOverlay v-model:open="addRecipeOpen" />
+    <SettingsModal v-model:open="settingsOpen" />
+    <GraphModal v-model:open="graphOpen" />
   </header>
 </template>
 
@@ -44,6 +47,8 @@ import ShareDialog from './ShareDialog.vue'
 import ImportDialog from './ImportDialog.vue'
 import SaveMenu from './SaveMenu.vue'
 import AddRecipeOverlay from './AddRecipeOverlay.vue'
+import SettingsModal from './SettingsModal.vue'
+import GraphModal from './GraphModal.vue'
 import { useConfigStore } from '../stores/config'
 import { useRecipesStore } from '../stores/recipes'
 
@@ -53,6 +58,8 @@ const recipesStore = useRecipesStore()
 const shareOpen = ref(false)
 const importOpen = ref(false)
 const addRecipeOpen = ref(false)
+const settingsOpen = ref(false)
+const graphOpen = ref(false)
 
 const hasErrors = computed(() => {
   const e = configStore.errors
@@ -96,19 +103,20 @@ function downloadJson() {
   URL.revokeObjectURL(url)
 }
 
-function onSettings() {
-  // v2.4
-}
-
 function onGlobalKeydown(e: KeyboardEvent) {
-  // Open cmd-K only when the overlay is closed and focus is not in another input/textarea.
+  const tag = (document.activeElement as HTMLElement)?.tagName?.toLowerCase()
+  const isInput = tag === 'input' || tag === 'textarea' || (document.activeElement as HTMLElement)?.isContentEditable
+  const anyOpen = addRecipeOpen.value || settingsOpen.value || graphOpen.value || shareOpen.value || importOpen.value
+
   if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-    const tag = (document.activeElement as HTMLElement)?.tagName?.toLowerCase()
-    const isInput = tag === 'input' || tag === 'textarea' || (document.activeElement as HTMLElement)?.isContentEditable
-    if (!addRecipeOpen.value && !isInput) {
+    if (!anyOpen && !isInput) {
       e.preventDefault()
       addRecipeOpen.value = true
     }
+  }
+  if (e.key === 'g' && !isInput && !anyOpen) {
+    e.preventDefault()
+    graphOpen.value = true
   }
 }
 

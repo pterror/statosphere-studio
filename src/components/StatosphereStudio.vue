@@ -36,6 +36,7 @@ import { encodeConfig, decodeConfig } from '../share/encode'
 import { useConfigStore } from '../stores/config'
 import { useRecipesStore } from '../stores/recipes'
 import { useLintsStore } from '../stores/lints'
+import { useSettingsStore } from '../stores/settings'
 
 const props = withDefaults(defineProps<{
   embedded?: boolean
@@ -67,10 +68,31 @@ const openInStudioUrl = computed(() => {
   return `${props.spaUrl}#cfg=${encoded}`
 })
 
+function applyTheme(t: 'light' | 'dark' | 'auto') {
+  if (typeof document === 'undefined') return
+  const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? true
+  const dark = t === 'dark' || (t === 'auto' && prefersDark)
+  if (dark) {
+    document.documentElement.setAttribute('data-theme', 'dark')
+  } else {
+    document.documentElement.removeAttribute('data-theme')
+  }
+}
+
 onMounted(() => {
   const configStore = useConfigStore()
   const recipesStore = useRecipesStore()
   const lintsStore = useLintsStore()
+  const settingsStore = useSettingsStore()
+
+  applyTheme(settingsStore.theme)
+  watch(() => settingsStore.theme, applyTheme)
+  const mq = window.matchMedia?.('(prefers-color-scheme: dark)')
+  if (mq) {
+    mq.addEventListener('change', () => {
+      if (settingsStore.theme === 'auto') applyTheme('auto')
+    })
+  }
 
   if (props.share) {
     try {

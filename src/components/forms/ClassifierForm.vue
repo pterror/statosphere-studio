@@ -1,8 +1,15 @@
 <template>
   <div class="flex flex-col gap-3">
-    <FieldRow label="Name" section="classifiers" field="name">
-      <input v-model="item.name" class="field-input" @input="emit('change')" />
-    </FieldRow>
+    <!-- Header row -->
+    <div class="flex gap-2 items-end">
+      <div class="flex flex-col gap-0.5 flex-1">
+        <label class="text-xs text-gray-500">Name</label>
+        <input v-model="item.name" class="field-input" @input="emit('change')" />
+      </div>
+      <button class="text-xs text-gray-500 hover:text-gray-300 px-1 shrink-0" @click="showAdvanced = !showAdvanced">{{ showAdvanced ? '▲ less' : '▼ more' }}</button>
+    </div>
+
+    <template v-if="showAdvanced">
     <FieldRow label="Condition" section="classifiers" field="condition">
       <ExpressionField v-model="item.condition" :rows="2" @update:model-value="emit('change')" />
     </FieldRow>
@@ -38,6 +45,7 @@
     <FieldRow label="History Context Size" section="classifiers" field="historyContextSize">
       <input type="number" v-model.number="item.historyContextSize" class="field-input" @input="emit('change')" />
     </FieldRow>
+    </template>
 
     <div class="border-t border-gray-800 pt-3">
       <div class="flex items-center justify-between mb-2">
@@ -75,14 +83,17 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import type { Classifier } from '../../stores/config'
 import FieldRow from '../sections/FieldRow.vue'
 import ExpressionField from '../widgets/ExpressionField.vue'
 import HypothesisField from '../widgets/HypothesisField.vue'
 import KeyValueList from '../widgets/KeyValueList.vue'
+import { useSettingsStore } from '../../stores/settings'
 
 const props = defineProps<{ item: Classifier }>()
 const emit = defineEmits<{ change: [] }>()
+const showAdvanced = ref(useSettingsStore().defaultExpandAdvanced)
 
 function addClassification() {
   props.item.classifications.push({ label: '', condition: '', category: '', threshold: 0.7, dynamic: false, updates: [] })
