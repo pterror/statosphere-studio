@@ -15,7 +15,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Patch } from '../lib/json-patch'
 import { diff, apply, invert } from '../lib/json-patch'
-import { getAll, put, deleteRecord, getMeta, putMeta, STORE_NODES } from '../lib/indexed-db'
+import { getAll, put, deleteRecord, clear, getMeta, putMeta, STORE_NODES, STORE_META } from '../lib/indexed-db'
 
 export interface HistoryNode {
   id: string
@@ -24,6 +24,13 @@ export interface HistoryNode {
   inversePatch: Patch
   timestamp: number
   label?: string
+}
+
+export interface HistoryExport {
+  version: 1
+  rootId: string
+  currentId: string
+  nodes: HistoryNode[]
 }
 
 export const useHistoryStore = defineStore('history', () => {
@@ -228,6 +235,84 @@ export const useHistoryStore = defineStore('history', () => {
     return { ok: true, state }
   }
 
+  // ── Export / Import ────────────────────────────────────────────────────
+
+  function exportTree(): HistoryExport {
+    return {
+      version: 1,
+      rootId: rootId.value,
+      currentId: currentId.value,
+      nodes: Array.from(nodes.value.values()),
+    }
+  }
+
+  async function importTree(
+    data: HistoryExport,
+    applyToRecipes?: (state: unknown) => void,
+  ): Promise<void> {
+    // Validate
+    if (data.version !== 1) throw new Error('Unsupported history export version')
+    if (!data.rootId || !data.currentId || !Array.isArray(data.nodes)) {
+      throw new Error('Malformed history export data')
+    }
+
+    // Clear IndexedDB first (fire-and-forget failures are acceptable)
+    try {
+      await clear(STORE_NODES)
+      await clear(STORE_META)
+    } catch {
+      // IndexedDB unavailable (test env) — proceed with in-memory only
+    }
+
+    // Rebuild in-memory tree
+    const nodeMap = new Map<string, HistoryNode>()
+    for (const n of data.nodes) {
+      nodeMap.set(n.id, n)
+    }
+    nodes.value = nodeMap
+    rootId.value = data.rootId
+    currentId.value = data.currentId
+
+    // Persist all nodes
+    for (const n of data.nodes) {
+      persistNode(n)
+    }
+    try {
+      await putMeta('rootNodeId', data.rootId)
+      await putMeta('currentNodeId', data.currentId)
+    } catch {
+      // IndexedDB unavailable
+    }
+
+    // Replay root → currentId to restore live state
+    if (applyToRecipes) {
+      // We need the initial (root) state — reconstruct by starting from empty
+      // and applying no patches (the root node represents the initial state).
+      // The caller supplies a restorer: we pass the replayed snapshot.
+      // Build path from root to currentId
+      function ancestors(id: string): string[] {
+        const chain: string[] = []
+        let cur: string | undefined = id
+        while (cur !== undefined) {
+          chain.push(cur)
+          const node = nodes.value.get(cur)
+          cur = node?.parentId
+        }
+        return chain
+      }
+      const path = ancestors(data.currentId).reverse()
+
+      // Start from an empty array (recipes root state) and replay patches
+      let state: unknown = []
+      for (const id of path) {
+        const node = nodes.value.get(id)
+        if (!node || node.patch.length === 0) continue
+        state = apply(state, node.patch)
+      }
+      applyToRecipes(state)
+    }
+  }
+
   // ── Rename ─────────────────────────────────────────────────────────────
 
   function rename(id: string, label: string): void {
@@ -285,5 +370,7 @@ export const useHistoryStore = defineStore('history', () => {
     jump,
     rename,
     deleteBranch,
+    exportTree,
+    importTree,
   }
 })

@@ -31,7 +31,15 @@ interface HistoryNode {
   parentId?: string
   patch: Patch
   inversePatch: Patch
+  timestamp?: number
   label?: string
+}
+
+interface HistoryExport {
+  version: 1
+  rootId: string
+  currentId: string
+  nodes: HistoryNode[]
 }
 
 class HistoryTree {
@@ -123,6 +131,39 @@ class HistoryTree {
     }
     this.currentId = targetId
     return { ok: true, state }
+  }
+
+  exportTree(): HistoryExport {
+    return {
+      version: 1,
+      rootId: this.rootId,
+      currentId: this.currentId,
+      nodes: Array.from(this.nodes.values()),
+    }
+  }
+
+  importTree(data: HistoryExport): void {
+    if (data.version !== 1) throw new Error('Unsupported history export version')
+    if (!data.rootId || !data.currentId || !Array.isArray(data.nodes)) {
+      throw new Error('Malformed history export data')
+    }
+    const nodeMap = new Map<string, HistoryNode>()
+    for (const n of data.nodes) nodeMap.set(n.id, n)
+    this.nodes = nodeMap
+    this.rootId = data.rootId
+    this.currentId = data.currentId
+  }
+
+  /** Replay root → targetId from an empty initial state, returning the resulting live state. */
+  replayFrom(targetId: string, initialState: unknown): unknown {
+    const path = this.ancestors(targetId).reverse()
+    let state: unknown = initialState
+    for (const id of path) {
+      const node = this.nodes.get(id)
+      if (!node || node.patch.length === 0) continue
+      state = apply(state, node.patch)
+    }
+    return state
   }
 }
 
@@ -221,6 +262,58 @@ console.log('\n[No-op commit]')
   const tree = new HistoryTree(s0)
   tree.commit(s0, s0)
   assert('no-op commit adds no node', tree.nodes.size === 1)
+}
+
+console.log('\n[Export / Import round-trip]')
+{
+  // Build a branched tree: root → A → B → C, then undo to A and branch → D → E
+  const s0 = { v: 0 }
+  const src = new HistoryTree(s0)
+  let live: unknown = s0
+
+  src.commit(live, { v: 1 }); live = { v: 1 }; const nodeA = src.currentId
+  src.commit(live, { v: 2 }); live = { v: 2 }
+  src.commit(live, { v: 3 }); live = { v: 3 }
+
+  let r = src.undo(live); live = r.state
+  r = src.undo(live); live = r.state
+  assert('back at A before branch', src.currentId === nodeA)
+
+  src.commit(live, { v: 10 }); live = { v: 10 }
+  src.commit(live, { v: 20 }); live = { v: 20 }
+  const lastId = src.currentId
+
+  const nodeCount = src.nodes.size
+
+  // Export → JSON → parse → import into fresh tree
+  const exported = src.exportTree()
+  const serialized = JSON.stringify(exported)
+  const parsed = JSON.parse(serialized) as HistoryExport
+
+  const dst = new HistoryTree({})
+  dst.importTree(parsed)
+
+  assert('import: node count matches', dst.nodes.size === nodeCount, `got ${dst.nodes.size}, want ${nodeCount}`)
+  assert('import: rootId restored', dst.rootId === src.rootId)
+  assert('import: currentId restored', dst.currentId === lastId)
+
+  // Verify all original node IDs are present
+  let allPresent = true
+  for (const id of src.nodes.keys()) {
+    if (!dst.nodes.has(id)) { allPresent = false; break }
+  }
+  assert('import: all node IDs present', allPresent)
+
+  // Verify that replaying root → currentId on dst yields the same state as src.
+  // The base state (at root) is s0 = { v: 0 }; patches are relative to that.
+  const replayedState = dst.replayFrom(dst.currentId, s0)
+  // The src's live state at currentId should be { v: 20 }
+  assert('import: replay root→currentId yields correct state', deepEqual(replayedState, { v: 20 }))
+
+  // Verify jump still works after import
+  r = dst.jump(live, nodeA); live = r.state
+  assert('import: jump to A ok after import', r.ok)
+  assert('import: state after jump to A is v=1', deepEqual(live, { v: 1 }))
 }
 
 console.log(`\n${passed} passed, ${failed} failed.`)

@@ -96,6 +96,11 @@
           </div>
 
           <p class="text-xs text-gray-500 mb-2">Export your studio state first if you want a backup.</p>
+          <label class="flex items-center gap-3 cursor-pointer text-sm text-gray-300 mb-2">
+            <input type="checkbox" v-model="includeHistory" class="w-4 h-4 accent-indigo-500" />
+            Include history (large)
+          </label>
+          <p class="text-xs text-gray-500 mt-1 ml-7 mb-2">When on, the exported bundle includes the full history tree. The file may be significantly larger.</p>
           <div class="flex gap-2 flex-wrap">
             <button class="glass-button px-3 py-1 rounded text-xs" @click="settings.clearScratchSlot()">Clear scratch slot</button>
             <button class="glass-button px-3 py-1 rounded text-xs" @click="exportEverything">Export everything…</button>
@@ -163,6 +168,7 @@ import { useHistoryStore } from '../stores/history'
 import ConfirmPopover from './ConfirmPopover.vue'
 import type { RecipeInstance, RecipeDef } from '../recipes/types'
 import type { DraftSlot } from '../stores/drafts'
+import type { HistoryExport } from '../stores/history'
 
 const open = defineModel<boolean>('open', { default: false })
 
@@ -180,6 +186,7 @@ const importBtn = ref<HTMLElement | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 const importPopoverOpen = ref(false)
 const replaceConfirmOpen = ref(false)
+const includeHistory = ref(false)
 
 let pendingBundle: BundlePayload | null = null
 
@@ -190,6 +197,7 @@ interface BundlePayload {
   customLibrary: RecipeDef[]
   drafts: DraftSlot[]
   settings: ReturnType<typeof settings.export>
+  history?: HistoryExport
 }
 
 function addPrefix() {
@@ -206,6 +214,9 @@ function exportEverything() {
     customLibrary: structuredClone(recipesStore.customLibrary),
     drafts: structuredClone(draftsStore.list),
     settings: settings.export(),
+  }
+  if (includeHistory.value) {
+    payload.history = historyStore.exportTree()
   }
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
@@ -242,7 +253,7 @@ function onFileChange(e: Event) {
   reader.readAsText(file)
 }
 
-function applyMerge() {
+async function applyMerge() {
   if (!pendingBundle) return
   const before = recipesStore.snapshotInstances()
   const bundle = pendingBundle
@@ -252,7 +263,15 @@ function applyMerge() {
   draftsStore.mergeSlots(bundle.drafts)
   settings.importSettings(bundle.settings)
 
-  historyStore.commit(before, recipesStore.snapshotInstances(), 'Imported bundle')
+  if (bundle.history) {
+    // importTree replays root→currentId and overwrites live recipes state.
+    await historyStore.importTree(bundle.history, (state) => {
+      recipesStore.restoreInstances(state as Parameters<typeof recipesStore.restoreInstances>[0])
+    })
+  } else {
+    // No history in bundle — commit the merge as a new history node.
+    historyStore.commit(before, recipesStore.snapshotInstances(), 'Imported bundle')
+  }
   toastStore.show('Imported studio bundle (merged).')
 }
 
@@ -261,7 +280,7 @@ function startReplace() {
   replaceConfirmOpen.value = true
 }
 
-function applyReplace() {
+async function applyReplace() {
   if (!pendingBundle) return
   const before = recipesStore.snapshotInstances()
   const bundle = pendingBundle
@@ -271,7 +290,15 @@ function applyReplace() {
   draftsStore.replaceSlots(bundle.drafts)
   settings.importSettings(bundle.settings)
 
-  historyStore.commit(before, recipesStore.snapshotInstances(), 'Imported bundle (replaced)')
+  if (bundle.history) {
+    // importTree replays root→currentId and overwrites live recipes state.
+    await historyStore.importTree(bundle.history, (state) => {
+      recipesStore.restoreInstances(state as Parameters<typeof recipesStore.restoreInstances>[0])
+    })
+  } else {
+    // No history in bundle — leave existing history intact; commit the replace.
+    historyStore.commit(before, recipesStore.snapshotInstances(), 'Imported bundle (replaced)')
+  }
   toastStore.show('Imported studio bundle (replaced).')
 }
 </script>

@@ -22,11 +22,46 @@
         <div class="flex items-center px-4 py-2 shrink-0" style="border-bottom: 1px solid var(--glass-border)">
           <span class="font-semibold text-sm" style="color: var(--text-primary)">History</span>
           <span class="ml-2 text-xs" style="color: var(--text-muted)">⌘H to close</span>
-          <button
-            class="ml-auto text-lg leading-none"
-            style="color: var(--text-muted)"
-            @click="emit('close')"
-          >&times;</button>
+          <div class="ml-auto flex items-center gap-2">
+            <button
+              class="glass-button text-xs py-0.5 px-2"
+              title="Export history tree to file"
+              @click="exportHistoryTree"
+            >Export tree…</button>
+            <button
+              ref="importHistoryBtnRef"
+              class="glass-button text-xs py-0.5 px-2"
+              title="Import history tree from file"
+              @click="importHistoryClick"
+            >Import tree…</button>
+            <input ref="historyFileInput" type="file" accept=".json" class="hidden" @change="onHistoryFileChange" />
+            <button
+              class="text-lg leading-none"
+              style="color: var(--text-muted)"
+              @click="emit('close')"
+            >&times;</button>
+          </div>
+        </div>
+
+        <!-- Import history confirm popover (inline, same pattern as delete-branch confirm) -->
+        <div
+          v-if="importConfirmOpen"
+          class="fixed inset-0 z-[60] flex items-center justify-center"
+          @mousedown.self="importConfirmOpen = false"
+        >
+          <div class="glass-panel p-5 flex flex-col gap-3" style="width: 320px">
+            <p class="text-sm" style="color: var(--text-secondary)">
+              Replace current history with imported tree? This cannot be undone.
+            </p>
+            <div class="flex justify-end gap-2">
+              <button class="glass-button text-xs py-1 px-3" @click="importConfirmOpen = false">Cancel</button>
+              <button
+                class="glass-button text-xs py-1 px-3"
+                style="border-color: rgba(185,28,28,0.5); color: #fca5a5"
+                @click="confirmHistoryImport"
+              >Replace</button>
+            </div>
+          </div>
         </div>
 
         <!-- Body: two-column layout -->
@@ -163,7 +198,7 @@ import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useHistoryStore } from '../stores/history'
 import { useRecipesStore } from '../stores/recipes'
 import { useToastStore } from '../stores/toast'
-import type { HistoryNode } from '../stores/history'
+import type { HistoryNode, HistoryExport } from '../stores/history'
 
 const emit = defineEmits<{ (e: 'close'): void }>()
 
@@ -175,6 +210,8 @@ const browserEl = ref<HTMLElement | null>(null)
 const treeEl = ref<HTMLElement | null>(null)
 const renameInputRef = ref<HTMLInputElement | null>(null)
 const deleteAnchorRef = ref<HTMLElement | null>(null)
+const importHistoryBtnRef = ref<HTMLElement | null>(null)
+const historyFileInput = ref<HTMLInputElement | null>(null)
 
 const selectedId = ref<string>(historyStore.currentId)
 const searchQuery = ref('')
@@ -182,6 +219,8 @@ const renamingId = ref<string | null>(null)
 const renameValue = ref('')
 const deleteConfirmOpen = ref(false)
 const subtreeSize = ref(0)
+const importConfirmOpen = ref(false)
+let pendingHistoryImport: HistoryExport | null = null
 
 onMounted(() => {
   nextTick(() => browserEl.value?.focus())
@@ -377,6 +416,66 @@ watch(() => historyStore.nodes, () => {
     selectedId.value = historyStore.currentId
   }
 }, { deep: false })
+
+// ── Export / Import history tree ─────────────────────────────────────────────
+
+function exportHistoryTree() {
+  const data = historyStore.exportTree()
+  const date = new Date().toISOString().slice(0, 10)
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `studio-history-${date}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+  toastStore.show('Exported history tree.')
+}
+
+function importHistoryClick() {
+  historyFileInput.value?.click()
+}
+
+function onHistoryFileChange(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  ;(e.target as HTMLInputElement).value = ''
+  const reader = new FileReader()
+  reader.onload = (ev) => {
+    try {
+      const parsed = JSON.parse(ev.target!.result as string) as HistoryExport
+      if (parsed.version !== 1) {
+        toastStore.show('Invalid history file: unrecognized version.', { durationMs: 5000 })
+        return
+      }
+      if (!parsed.rootId || !parsed.currentId || !Array.isArray(parsed.nodes)) {
+        toastStore.show('Invalid history file: missing required fields.', { durationMs: 5000 })
+        return
+      }
+      pendingHistoryImport = parsed
+      importConfirmOpen.value = true
+    } catch {
+      toastStore.show('Failed to parse history file.', { durationMs: 5000 })
+    }
+  }
+  reader.readAsText(file)
+}
+
+async function confirmHistoryImport() {
+  if (!pendingHistoryImport) return
+  const data = pendingHistoryImport
+  pendingHistoryImport = null
+  importConfirmOpen.value = false
+  try {
+    await historyStore.importTree(data, (state) => {
+      recipesStore.restoreInstances(state as Parameters<typeof recipesStore.restoreInstances>[0])
+    })
+    selectedId.value = historyStore.currentId
+    toastStore.show('History tree imported.')
+  } catch (err) {
+    toastStore.show(`Import failed: ${err instanceof Error ? err.message : String(err)}`, { durationMs: 5000 })
+  }
+}
 </script>
 
 <style scoped>
