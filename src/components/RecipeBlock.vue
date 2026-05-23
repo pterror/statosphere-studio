@@ -13,9 +13,9 @@
     >
       <!-- First row: grip + name + recipe label + collapse + ⋯ -->
       <div class="flex items-center gap-2">
-        <!-- Grip handle -->
+        <!-- Grip handle — six-dot grip, visible at rest -->
         <span
-          class="grip-handle text-gray-400 hover:text-gray-200 focus:text-gray-200 cursor-grab active:cursor-grabbing shrink-0 select-none outline-none"
+          class="grip-handle cursor-grab active:cursor-grabbing shrink-0 select-none outline-none"
           title="Drag to reorder"
           role="button"
           tabindex="0"
@@ -23,7 +23,7 @@
           v-bind="gripDrag"
           @click.stop
           @keydown="onGripKeydown"
-        >≡</span>
+        >⠿⠿</span>
         <!-- Inline rename -->
         <input
           v-if="isRenaming"
@@ -38,13 +38,13 @@
         />
         <span
           v-else
-          class="text-sm font-medium text-gray-100 cursor-text hover:text-white"
+          class="block-name text-sm font-medium text-gray-100 cursor-text"
           title="Click to rename"
           @click.stop="beginRename"
           tabindex="0"
           @keydown.enter.prevent="beginRename"
           @keydown.space.prevent="beginRename"
-        >{{ instance.name }}</span>
+        >{{ instance.name }}<span class="rename-pencil" aria-hidden="true">✎</span></span>
         <span class="text-xs text-gray-500">{{ recipeName }}</span>
 
         <span class="text-gray-600 text-xs ml-auto mr-2">{{ collapsed ? '▶' : '▼' }}</span>
@@ -58,7 +58,7 @@
           >⋯</button>
           <Popover v-model:open="menuOpen" :anchor="menuTriggerRef" placement="below-right" :roving="true">
             <div class="glass-panel py-1 min-w-[160px]" style="border-radius: 10px">
-              <button role="menuitem" class="block w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-hover)]" style="color: var(--text-secondary)" @click="onRename">Rename</button>
+              <button role="menuitem" class="block w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-hover)]" style="color: var(--text-secondary)" @click="onRename"><span class="menu-pencil" aria-hidden="true">✎</span> Rename</button>
               <button role="menuitem" class="block w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-hover)]" style="color: var(--text-secondary)" @click="onDuplicate">Duplicate</button>
               <button role="menuitem" class="block w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-hover)]" style="color: var(--text-secondary)" @click="onPromote">Promote to recipe…</button>
               <button role="menuitem" class="block w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-hover)]" style="color: var(--text-secondary)" @click="onExportUrl">Export as URL</button>
@@ -373,9 +373,53 @@ function onExportUrl() { closeMenu(); emit('export-url', props.instance.id) }
   gap: 0;
 }
 
+/* Block-level grip: two stacked ⠿ gives a six-dot feel; muted at rest */
+.grip-handle {
+  font-size: 0.75rem;
+  letter-spacing: -0.1em;
+  line-height: 1;
+  color: rgba(156, 163, 175, 0.35);
+  transition: color 120ms ease;
+}
+.block-header:hover .grip-handle,
+.grip-handle:focus {
+  color: rgba(209, 213, 219, 0.85);
+}
 .grip-handle:focus-visible {
   box-shadow: 0 0 0 2px var(--accent-soft);
   border-radius: 2px;
+}
+
+/* Inline rename cue */
+.block-name {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: color 120ms ease;
+}
+.block-name:hover {
+  color: white;
+  text-decoration: underline;
+  text-decoration-color: rgba(156, 163, 175, 0.4);
+  text-underline-offset: 3px;
+}
+.rename-pencil {
+  font-size: 0.75rem;
+  opacity: 0;
+  transition: opacity 120ms ease;
+  color: rgba(156, 163, 175, 0.7);
+  margin-left: 2px;
+}
+.block-name:hover .rename-pencil {
+  opacity: 1;
+}
+
+/* Pencil in ⋯ menu */
+.menu-pencil {
+  font-size: 0.8rem;
+  opacity: 0.6;
+  margin-right: 2px;
 }
 .param-input {
   @apply rounded px-1.5 py-0.5 text-xs outline-none;

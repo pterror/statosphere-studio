@@ -1,12 +1,12 @@
 <template>
-  <div class="flex flex-col">
+  <div class="flex flex-col element-row-wrap">
     <div
-      class="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-800 rounded cursor-pointer"
+      class="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-800 rounded cursor-pointer element-row"
       @click="toggleExpanded"
     >
       <span
         v-if="dragSource"
-        class="drag-handle text-gray-400 hover:text-gray-200 focus:text-gray-200 cursor-grab active:cursor-grabbing shrink-0 select-none text-xs outline-none"
+        class="drag-handle cursor-grab active:cursor-grabbing shrink-0 select-none text-xs outline-none"
         title="Drag to move to another block"
         role="button"
         tabindex="0"
@@ -15,9 +15,22 @@
         @click.stop
         @keydown="onDragHandleKeydown"
       >⠿</span>
+      <span v-else class="w-3 shrink-0"></span>
       <span class="text-xs text-gray-500 w-20 shrink-0">{{ typeLabel }}</span>
       <span class="text-sm text-gray-200 truncate flex-1">{{ displayName }}</span>
-      <span v-if="isPinned" class="text-xs text-amber-400 shrink-0" title="Edited manually — survives recipe param changes">pinned ●</span>
+      <!-- Pin affordance: shown for recipe-derived rows (has instanceId but may not yet be pinned) -->
+      <button
+        v-if="instanceId"
+        class="pin-btn shrink-0 outline-none"
+        :class="isPinned ? 'pin-btn--active' : 'pin-btn--idle'"
+        :title="isPinned ? 'Pinned — click to revert to recipe' : 'Pin to customize independently from recipe'"
+        :aria-label="isPinned ? 'Unpin element' : 'Pin element'"
+        tabindex="0"
+        @click.stop="togglePin"
+        @keydown.enter.stop="togglePin"
+        @keydown.space.prevent.stop="togglePin"
+      >📌</button>
+      <span v-if="isPinned" class="text-xs text-amber-400 shrink-0 pin-label" title="Edited manually — survives recipe param changes">pinned ●</span>
       <span class="text-gray-600 text-xs ml-auto">{{ expanded ? '▲' : '▼' }}</span>
     </div>
     <div v-if="expanded" class="px-3 pb-3">
@@ -116,6 +129,16 @@ function unpin() {
   }
 }
 
+function togglePin() {
+  if (!props.instanceId || !elementName.value) return
+  if (isPinned.value) {
+    recipesStore.unpinElement(props.instanceId, props.elementType, elementName.value)
+  } else {
+    recipesStore.pinElement(props.instanceId, props.elementType, elementName.value)
+  }
+  emit('change')
+}
+
 function onDragHandleKeydown(e: KeyboardEvent) {
   if (!(e.metaKey || e.ctrlKey)) return
   if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
@@ -130,8 +153,53 @@ defineExpose({ expand: () => { expanded.value = true } })
 </script>
 
 <style scoped>
+/* Drag handle: visible at rest in muted color, brightens on row hover + focus */
+.drag-handle {
+  color: rgba(156, 163, 175, 0.35); /* muted gray at rest */
+  transition: color 120ms ease;
+}
+.element-row:hover .drag-handle,
+.drag-handle:focus {
+  color: rgba(209, 213, 219, 0.85);
+}
 .drag-handle:focus-visible {
   box-shadow: 0 0 0 2px var(--accent-soft);
   border-radius: 2px;
+}
+
+/* Pin button */
+.pin-btn {
+  font-size: 0.7rem;
+  line-height: 1;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 2px;
+  border-radius: 3px;
+  transition: opacity 120ms ease, filter 120ms ease;
+}
+.pin-btn--idle {
+  opacity: 0;
+  filter: grayscale(1);
+}
+.element-row:hover .pin-btn--idle,
+.pin-btn--idle:focus {
+  opacity: 0.5;
+}
+.pin-btn--idle:hover {
+  opacity: 0.85 !important;
+  filter: none;
+}
+.pin-btn--active {
+  opacity: 1;
+  filter: none;
+}
+.pin-btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+/* Hide redundant "pinned ●" label when pin icon is visible */
+.pin-btn--active + .pin-label {
+  display: none;
 }
 </style>
