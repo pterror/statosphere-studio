@@ -5,10 +5,10 @@
         v-for="tab in tabs"
         :key="tab.key"
         class="px-4 py-2 text-sm transition-colors"
-        :class="activeTab === tab.key
+        :class="uiStore.activeTab === tab.key
           ? 'border-b-2 border-indigo-400 text-indigo-300'
           : 'text-gray-400 hover:text-gray-200'"
-        @click="activeTab = tab.key"
+        @click="uiStore.activeTab = tab.key"
       >
         {{ tab.label }}
       </button>
@@ -21,13 +21,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import JsonFooter from './JsonFooter.vue'
 import VariablesSection from './sections/VariablesSection.vue'
 import FunctionsSection from './sections/FunctionsSection.vue'
 import ClassifiersSection from './sections/ClassifiersSection.vue'
 import GeneratorsSection from './sections/GeneratorsSection.vue'
 import ContentRulesSection from './sections/ContentRulesSection.vue'
+import TemplatesGallery from './TemplatesGallery.vue'
+import { useUiStore } from '../stores/ui'
+
+const uiStore = useUiStore()
 
 const tabs = [
   { key: 'variables', label: 'Variables' },
@@ -40,15 +44,14 @@ const tabs = [
   { key: 'settings', label: 'Settings' },
 ]
 
-const activeTab = ref('variables')
-
 const sectionMap: Record<string, unknown> = {
   variables: VariablesSection,
   functions: FunctionsSection,
   classifiers: ClassifiersSection,
   generators: GeneratorsSection,
   contentRules: ContentRulesSection,
+  templates: TemplatesGallery,
 }
 
-const sectionComponent = computed(() => sectionMap[activeTab.value] ?? null)
+const sectionComponent = computed(() => sectionMap[uiStore.activeTab] ?? null)
 </script>

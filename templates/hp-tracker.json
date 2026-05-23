@@ -1,0 +1,48 @@
+{
+  "variables": [
+    {
+      "name": "hp",
+      "initialValue": "50"
+    },
+    {
+      "name": "max_hp",
+      "initialValue": "50"
+    }
+  ],
+  "functions": [],
+  "classifiers": [
+    {
+      "name": "CombatEvents",
+      "inputTemplate": "{{content}}",
+      "inputHypothesis": "The user describes the character {}.",
+      "responseTemplate": "{{content}}",
+      "responseHypothesis": "The character {}.",
+      "classifications": [
+        {
+          "label": "taking damage or being hurt",
+          "category": "health_event",
+          "threshold": 0.65,
+          "updates": [
+            { "variable": "hp", "setTo": "max(0, hp - 10)" }
+          ]
+        },
+        {
+          "label": "healing or recovering",
+          "category": "health_event",
+          "threshold": 0.65,
+          "updates": [
+            { "variable": "hp", "setTo": "min(max_hp, hp + 15)" }
+          ]
+        }
+      ]
+    }
+  ],
+  "generators": [],
+  "contentRules": [
+    {
+      "category": "Stage Direction",
+      "condition": "true",
+      "modification": "\"HP: \" + hp + \"/\" + max_hp + \". \" + (hp < 15 ? \"The character is critically injured.\" : hp < 30 ? \"The character is hurt.\" : \"The character is in reasonable shape.\")"
+    }
+  ]
+}

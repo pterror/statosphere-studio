@@ -167,5 +167,11 @@ export const useConfigStore = defineStore('config', () => {
     dirty.value = false
   }
 
-  return { config, dirty, errors, json, loadJson, markDirty, markSaved, validate }
+  function loadTemplate(data: ConfigTree) {
+    config.value = data
+    dirty.value = true
+    validate()
+  }
+
+  return { config, dirty, errors, json, loadJson, loadTemplate, markDirty, markSaved, validate }
 })
