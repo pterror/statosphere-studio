@@ -33,6 +33,7 @@
           <DropdownMenuItem class="menu-item" @click="downloadJson">Download .json</DropdownMenuItem>
           <DropdownMenuItem class="menu-item" @click="shareOpen = true">Share</DropdownMenuItem>
           <DropdownMenuItem class="menu-item" @click="graphOpen = true">Graph</DropdownMenuItem>
+          <DropdownMenuItem class="menu-item" @click="emit('open-history')">History… <span class="text-xs opacity-50 ml-1">⌘H</span></DropdownMenuItem>
           <DropdownMenuItem class="menu-item">
             <SaveMenu />
           </DropdownMenuItem>
@@ -73,6 +74,7 @@ import { emptyElement } from '../recipes/empty-element'
 const emit = defineEmits<{
   (e: 'toggle-browse'): void
   (e: 'open-library-modal'): void
+  (e: 'open-history'): void
 }>()
 
 const configStore = useConfigStore()

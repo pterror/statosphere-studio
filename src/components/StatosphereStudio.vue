@@ -3,7 +3,7 @@
     class="flex flex-col text-gray-100 font-sans"
     :class="embedded ? 'h-[600px] relative' : 'h-screen'"
   >
-    <TopBar v-if="!embedded" @toggle-browse="onToggleBrowse" @open-library-modal="libraryModalOpen = true" />
+    <TopBar v-if="!embedded" @toggle-browse="onToggleBrowse" @open-library-modal="libraryModalOpen = true" @open-history="historyBrowserOpen = true" />
     <!-- Recipe-install confirmation banner -->
     <div
       v-if="rcpBanner"
@@ -18,6 +18,8 @@
     </div>
     <StreamCanvas ref="canvasRef" :class="embedded ? 'pt-0' : ''" @open-library-modal="libraryModalOpen = true" />
     <Toast />
+    <!-- cmd-H history browser -->
+    <HistoryBrowser v-if="historyBrowserOpen" @close="historyBrowserOpen = false" />
     <!-- cmd-K modal -->
     <Teleport to="body">
       <div v-if="libraryModalOpen" class="fixed inset-0 z-50 flex items-start justify-center pt-[12vh]" @mousedown.self="libraryModalOpen = false">
@@ -43,6 +45,7 @@ import TopBar from './TopBar.vue'
 import StreamCanvas from './StreamCanvas.vue'
 import RecipeLibrary from './RecipeLibrary.vue'
 import Toast from './Toast.vue'
+import HistoryBrowser from './HistoryBrowser.vue'
 import { hydrateFromLocation } from '../share/hydrate'
 import { encodeConfig, decodeConfig } from '../share/encode'
 import { useConfigStore } from '../stores/config'
@@ -70,6 +73,7 @@ let teardownShortcuts: (() => void) | null = null
 
 const rcpBanner = ref<{ recipeId: string; name: string } | null>(null)
 const libraryModalOpen = ref(false)
+const historyBrowserOpen = ref(false)
 const canvasRef = ref<InstanceType<typeof StreamCanvas> | null>(null)
 
 function addInstanceNow() {
@@ -141,6 +145,8 @@ onMounted(() => {
     'ctrl+z': () => applyHistoryState(historyStore.undo(recipesStore.snapshotInstances())),
     'meta+shift+z': () => applyHistoryState(historyStore.redo(recipesStore.snapshotInstances())),
     'ctrl+shift+z': () => applyHistoryState(historyStore.redo(recipesStore.snapshotInstances())),
+    'meta+h': () => { historyBrowserOpen.value = !historyBrowserOpen.value },
+    'ctrl+h': () => { historyBrowserOpen.value = !historyBrowserOpen.value },
   })
 
   applyTheme(settingsStore.theme)
