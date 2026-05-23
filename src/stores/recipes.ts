@@ -1,10 +1,11 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { RecipeInstance, RecipeDef, ElementType, SchemaArrays } from '../recipes/types'
 import { materializeInstances } from '../recipes/materialize'
-import { getRecipe } from '../recipes/registry'
+import { getRecipe, registerRecipe, unregisterRecipe } from '../recipes/registry'
 
 const STORAGE_KEY = 'statosphere-studio-recipes-v2'
+const LIBRARY_KEY = 'statosphere-studio-custom-library-v2'
 
 function emptyArrays(): SchemaArrays {
   return { variables: [], classifiers: [], generators: [], contentRules: [], functions: [] }
@@ -26,9 +27,30 @@ function saveToStorage(instances: RecipeInstance[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(instances))
 }
 
+function loadLibrary(): RecipeDef[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = localStorage.getItem(LIBRARY_KEY)
+    if (!raw) return []
+    return JSON.parse(raw) as RecipeDef[]
+  } catch {
+    return []
+  }
+}
+
+function saveLibrary(defs: RecipeDef[]): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(LIBRARY_KEY, JSON.stringify(defs))
+}
+
 export const useRecipesStore = defineStore('recipes', () => {
   const instances = ref<RecipeInstance[]>(loadFromStorage())
-  const customLibrary = ref<RecipeDef[]>([])
+  const customLibrary = ref<RecipeDef[]>(loadLibrary())
+
+  // Register all persisted custom recipes into the registry on startup.
+  for (const def of customLibrary.value) {
+    registerRecipe(def)
+  }
 
   const materialized = computed<SchemaArrays>(() => materializeInstances(instances.value))
 
@@ -64,6 +86,27 @@ export const useRecipesStore = defineStore('recipes', () => {
     }
   }
 
+  function renameInstance(id: string, name: string): void {
+    const inst = instances.value.find((i) => i.id === id)
+    if (inst) {
+      inst.name = name
+      persist()
+    }
+  }
+
+  function duplicateInstance(id: string): string {
+    const inst = instances.value.find((i) => i.id === id)
+    if (!inst) return ''
+    const newId = crypto.randomUUID()
+    instances.value.push({
+      ...JSON.parse(JSON.stringify(inst)),
+      id: newId,
+      name: inst.name + ' copy',
+    })
+    persist()
+    return newId
+  }
+
   function updateParams(id: string, params: Record<string, unknown>): void {
     const inst = instances.value.find((i) => i.id === id)
     if (inst) {
@@ -77,8 +120,11 @@ export const useRecipesStore = defineStore('recipes', () => {
     if (!inst) return
     const recipe = getRecipe(inst.recipeId)
     if (!recipe) return
-    const materialized = recipe.materialize(inst.params)
-    const el = materialized[elementType].find((e: any) => e?.name === elementName)
+    const mat =
+      recipe.source.kind === 'builtin'
+        ? recipe.source.materialize(inst.params)
+        : materializeInstances([inst])
+    const el = mat[elementType].find((e: any) => e?.name === elementName)
     if (!el) return
     if (!inst.pinned.find((p) => p.elementType === elementType && p.elementName === elementName)) {
       inst.pinned.push({ elementType, elementName, override: JSON.parse(JSON.stringify(el)) })
@@ -113,16 +159,48 @@ export const useRecipesStore = defineStore('recipes', () => {
     persist()
   }
 
+  // Custom library actions
+
+  function addCustomRecipe(def: RecipeDef): void {
+    customLibrary.value.push(def)
+    registerRecipe(def)
+    saveLibrary(customLibrary.value)
+  }
+
+  function removeCustomRecipe(id: string): void {
+    const idx = customLibrary.value.findIndex((d) => d.id === id)
+    if (idx !== -1) {
+      customLibrary.value.splice(idx, 1)
+      unregisterRecipe(id)
+      saveLibrary(customLibrary.value)
+    }
+  }
+
+  function renameCustomRecipe(id: string, newName: string): void {
+    const def = customLibrary.value.find((d) => d.id === id)
+    if (def) {
+      def.name = newName
+      // Keep registry in sync.
+      registerRecipe(def)
+      saveLibrary(customLibrary.value)
+    }
+  }
+
   return {
     instances,
     customLibrary,
     materialized,
     addInstance,
     removeInstance,
+    renameInstance,
+    duplicateInstance,
     updateParams,
     pinElement,
     unpinElement,
     updatePinnedElement,
     addExtra,
+    addCustomRecipe,
+    removeCustomRecipe,
+    renameCustomRecipe,
   }
 })

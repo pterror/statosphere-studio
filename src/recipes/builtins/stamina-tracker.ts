@@ -68,7 +68,7 @@ const def: RecipeDef = {
   description: 'Models exertion and rest. Heavy activity drains stamina; resting regenerates it.',
   tags: ['stamina', 'regen', 'classifier', 'stat'],
   params: [],
-  materialize: () => JSON.parse(JSON.stringify(data)),
+  source: { kind: "builtin", materialize: () => JSON.parse(JSON.stringify(data)) },
 }
 
 export default def

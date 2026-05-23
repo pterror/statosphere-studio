@@ -78,7 +78,7 @@ const def: RecipeDef = {
   description: 'Models a three-way story branch gated by act.',
   tags: ['branching', 'acts', 'classifier', 'narrative'],
   params: [],
-  materialize: () => JSON.parse(JSON.stringify(data)),
+  source: { kind: "builtin", materialize: () => JSON.parse(JSON.stringify(data)) },
 }
 
 export default def

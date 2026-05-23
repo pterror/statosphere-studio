@@ -70,7 +70,7 @@ const def: RecipeDef = {
   description: 'Tracks a companion\'s emotional state across the conversation.',
   tags: ['mood', 'classifier', 'companion'],
   params: [],
-  materialize: () => JSON.parse(JSON.stringify(data)),
+  source: { kind: "builtin", materialize: () => JSON.parse(JSON.stringify(data)) },
 }
 
 export default def

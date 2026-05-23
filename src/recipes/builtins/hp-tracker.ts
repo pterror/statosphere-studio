@@ -10,7 +10,7 @@ const def: RecipeDef = {
     { kind: 'label-list', key: 'damageLabels', label: 'Damage labels', default: ['hit', 'blow', 'slash'] },
     { kind: 'label-list', key: 'healLabels', label: 'Heal labels', default: ['heal', 'bandage', 'potion'] },
   ],
-  materialize(params): SchemaArrays {
+  source: { kind: 'builtin', materialize(params): SchemaArrays {
     const maxHp = (params.maxHp as number | undefined) ?? 100
     const damageLabels = (params.damageLabels as string[] | undefined) ?? ['hit', 'blow', 'slash']
     const healLabels = (params.healLabels as string[] | undefined) ?? ['heal', 'bandage', 'potion']
@@ -61,7 +61,7 @@ const def: RecipeDef = {
         },
       ],
     }
-  },
+  } },
 }
 
 export default def

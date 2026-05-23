@@ -32,7 +32,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import {
   DropdownMenuRoot,
   DropdownMenuTrigger,
@@ -99,6 +99,21 @@ function downloadJson() {
 function onSettings() {
   // v2.4
 }
+
+function onGlobalKeydown(e: KeyboardEvent) {
+  // Open cmd-K only when the overlay is closed and focus is not in another input/textarea.
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    const tag = (document.activeElement as HTMLElement)?.tagName?.toLowerCase()
+    const isInput = tag === 'input' || tag === 'textarea' || (document.activeElement as HTMLElement)?.isContentEditable
+    if (!addRecipeOpen.value && !isInput) {
+      e.preventDefault()
+      addRecipeOpen.value = true
+    }
+  }
+}
+
+onMounted(() => window.addEventListener('keydown', onGlobalKeydown))
+onUnmounted(() => window.removeEventListener('keydown', onGlobalKeydown))
 </script>
 
 <style scoped>

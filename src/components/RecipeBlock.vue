@@ -16,8 +16,13 @@
         <div
           v-if="menuOpen"
           v-click-outside="() => { menuOpen = false }"
-          class="absolute right-0 top-6 z-20 bg-gray-900 border border-gray-700 rounded shadow-xl py-1 min-w-[120px]"
+          class="absolute right-0 top-6 z-20 bg-gray-900 border border-gray-700 rounded shadow-xl py-1 min-w-[160px]"
         >
+          <button class="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-800" @click="onRename">Rename</button>
+          <button class="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-800" @click="onDuplicate">Duplicate</button>
+          <button class="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-800" @click="onPromote">Promote to recipe…</button>
+          <button class="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-800" @click="onExportUrl">Export as URL</button>
+          <div class="border-t border-gray-800 my-1" />
           <button class="block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-800" @click="onRemove">Remove</button>
         </div>
       </div>
@@ -35,6 +40,13 @@
       </template>
       <div v-if="totalCount === 0" class="px-4 py-3 text-xs text-gray-600">No elements</div>
     </div>
+
+    <PromoteRecipeDialog
+      v-if="promoteOpen"
+      v-model:open="promoteOpen"
+      :instance="instance"
+      :materialized="allElements"
+    />
   </div>
 </template>
 
@@ -43,13 +55,18 @@ import { ref, computed } from 'vue'
 import type { RecipeInstance, ElementType } from '../recipes/types'
 import { getRecipe } from '../recipes/registry'
 import { materializeInstances } from '../recipes/materialize'
+import { useRecipesStore } from '../stores/recipes'
 import ElementRow from './ElementRow.vue'
+import PromoteRecipeDialog from './PromoteRecipeDialog.vue'
 
 const props = defineProps<{ instance: RecipeInstance }>()
 const emit = defineEmits<{ remove: [id: string]; change: [] }>()
 
+const recipesStore = useRecipesStore()
+
 const collapsed = ref(false)
 const menuOpen = ref(false)
+const promoteOpen = ref(false)
 
 const ELEMENT_TYPES: ElementType[] = ['variables', 'classifiers', 'generators', 'contentRules', 'functions']
 
@@ -64,6 +81,30 @@ const totalCount = computed(() =>
 function onRemove() {
   menuOpen.value = false
   emit('remove', props.instance.id)
+}
+
+function onRename() {
+  menuOpen.value = false
+  const newName = prompt('Rename recipe instance:', props.instance.name)
+  if (newName && newName.trim()) {
+    recipesStore.renameInstance(props.instance.id, newName.trim())
+  }
+}
+
+function onDuplicate() {
+  menuOpen.value = false
+  recipesStore.duplicateInstance(props.instance.id)
+}
+
+function onPromote() {
+  menuOpen.value = false
+  promoteOpen.value = true
+}
+
+function onExportUrl() {
+  menuOpen.value = false
+  // URL sharing comes in v2.3
+  alert('Export as URL — implemented in v2.3')
 }
 
 const clickOutsideHandlers = new WeakMap<HTMLElement, (e: MouseEvent) => void>()

@@ -59,7 +59,7 @@ const def: RecipeDef = {
   description: 'Detects fact-worthy responses and accumulates a running fact list.',
   tags: ['memory', 'facts', 'generator', 'classifier'],
   params: [],
-  materialize: () => JSON.parse(JSON.stringify(data)),
+  source: { kind: "builtin", materialize: () => JSON.parse(JSON.stringify(data)) },
 }
 
 export default def

@@ -12,16 +12,31 @@ export type ParamSpec =
   | { kind: 'enum'; key: string; label: string; default: string; choices: string[] }
   | { kind: 'label-list'; key: string; label: string; default: string[] }
 
+export type ElementType = 'variables' | 'classifiers' | 'generators' | 'contentRules' | 'functions'
+
+// Path to a string field inside SchemaArrays for template substitution.
+// e.g. { elementType: 'variables', index: 0, fieldPath: ['initialValue'] }
+export interface ParamPath {
+  elementType: ElementType
+  index: number
+  fieldPath: string[]
+}
+
+export interface Substitution {
+  path: ParamPath
+  paramKey: string
+}
+
 export interface RecipeDef {
   id: string
   name: string
   description: string
   tags?: string[]
   params: ParamSpec[]
-  materialize: (params: Record<string, unknown>) => SchemaArrays
+  source:
+    | { kind: 'builtin'; materialize: (params: Record<string, unknown>) => SchemaArrays }
+    | { kind: 'template'; template: SchemaArrays; substitutions: Substitution[] }
 }
-
-export type ElementType = 'variables' | 'classifiers' | 'generators' | 'contentRules' | 'functions'
 
 export interface PinnedElement {
   elementType: ElementType

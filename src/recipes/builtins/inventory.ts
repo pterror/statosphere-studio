@@ -60,7 +60,7 @@ const def: RecipeDef = {
   description: 'Maintains four named item slots with a full-inventory lock.',
   tags: ['inventory', 'items', 'classifier'],
   params: [],
-  materialize: () => JSON.parse(JSON.stringify(data)),
+  source: { kind: "builtin", materialize: () => JSON.parse(JSON.stringify(data)) },
 }
 
 export default def

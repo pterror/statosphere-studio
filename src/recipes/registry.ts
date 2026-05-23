@@ -14,3 +14,7 @@ export function listRecipes(): RecipeDef[] {
 export function registerRecipe(def: RecipeDef): void {
   registry.set(def.id, def)
 }
+
+export function unregisterRecipe(id: string): void {
+  registry.delete(id)
+}

@@ -1,4 +1,4 @@
-import type { RecipeInstance, SchemaArrays, ElementType } from './types'
+import type { RecipeInstance, SchemaArrays, ElementType, Substitution } from './types'
 import { getRecipe } from './registry'
 
 function safeName(prefix: string): string {
@@ -25,6 +25,42 @@ function mergeArrays(a: SchemaArrays, b: SchemaArrays): SchemaArrays {
   }
 }
 
+// Walk a nested object/array by fieldPath and set the leaf to value.
+function setDeep(obj: any, path: string[], value: string): void {
+  let cur = obj
+  for (let i = 0; i < path.length - 1; i++) {
+    cur = cur?.[path[i]]
+  }
+  if (cur != null && path.length > 0) {
+    cur[path[path.length - 1]] = value
+  }
+}
+
+// Generic interpreter for serializable custom recipes.
+// Clones the template and substitutes paramKey values at each declared path.
+export function interpretTemplate(
+  template: SchemaArrays,
+  substitutions: Substitution[],
+  params: Record<string, unknown>,
+): SchemaArrays {
+  const result: SchemaArrays = JSON.parse(JSON.stringify(template))
+  for (const sub of substitutions) {
+    const { elementType, index, fieldPath } = sub.path
+    const arr = result[elementType]
+    if (index < arr.length) {
+      const val = params[sub.paramKey]
+      if (typeof val === 'string') {
+        setDeep(arr[index], fieldPath, val)
+      } else if (Array.isArray(val)) {
+        setDeep(arr[index], fieldPath, val.join(', '))
+      } else if (val != null) {
+        setDeep(arr[index], fieldPath, String(val))
+      }
+    }
+  }
+  return result
+}
+
 const ELEMENT_TYPES: ElementType[] = ['variables', 'classifiers', 'generators', 'contentRules', 'functions']
 
 export function materializeInstances(instances: RecipeInstance[]): SchemaArrays {
@@ -40,7 +76,13 @@ export function materializeInstances(instances: RecipeInstance[]): SchemaArrays 
     const recipe = getRecipe(inst.recipeId)
     if (!recipe) continue
 
-    const materialized = recipe.materialize(inst.params)
+    let materialized: SchemaArrays
+    if (recipe.source.kind === 'builtin') {
+      materialized = recipe.source.materialize(inst.params)
+    } else {
+      materialized = interpretTemplate(recipe.source.template, recipe.source.substitutions, inst.params)
+    }
+
     const prefix = safeName(inst.name) || safeName(inst.recipeId)
 
     const pinnedMap = new Map<string, any>()

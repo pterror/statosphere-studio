@@ -70,7 +70,7 @@ const def: RecipeDef = {
   description: 'Detects location changes and generates a new background image.',
   tags: ['background', 'image', 'scene', 'classifier', 'generator'],
   params: [],
-  materialize: () => JSON.parse(JSON.stringify(data)),
+  source: { kind: "builtin", materialize: () => JSON.parse(JSON.stringify(data)) },
 }
 
 export default def

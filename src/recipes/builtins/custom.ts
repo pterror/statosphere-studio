@@ -14,7 +14,7 @@ const def: RecipeDef = {
   description: 'A freeform bucket for raw elements — added via "+ Element" or JSON import.',
   tags: [],
   params: [],
-  materialize: () => JSON.parse(JSON.stringify(empty)),
+  source: { kind: 'builtin', materialize: () => JSON.parse(JSON.stringify(empty)) },
 }
 
 export default def

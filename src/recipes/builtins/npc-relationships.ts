@@ -79,7 +79,7 @@ const def: RecipeDef = {
   description: 'Tracks affinity scores for three named NPCs.',
   tags: ['npc', 'affinity', 'classifier', 'relationships'],
   params: [],
-  materialize: () => JSON.parse(JSON.stringify(data)),
+  source: { kind: "builtin", materialize: () => JSON.parse(JSON.stringify(data)) },
 }
 
 export default def
