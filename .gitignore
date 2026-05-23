@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.direnv/
+.envrc.local
+.idea/
+.vscode/
+*.swp

@@ -1,0 +1,29 @@
+{
+  "title": "Content",
+  "description": "An array of content modifications to apply to input, responses, system messages, or stage directions.",
+  "type": "array",
+  "minItems": 0,
+  "items": {
+    "title": "Content Overrides",
+    "description": "A content override to make under the specified conditions.",
+    "type": "object",
+    "properties": {
+      "category": {
+        "title": "Content Category",
+        "description": "Category of content to modify with this rule.",
+        "type": "string",
+        "enum": ["Input", "Post Input", "Stage Direction", "Response", "Post Response"]
+      },
+      "condition": {
+        "title": "Condition",
+        "description": "Requirement for inclusion.",
+        "type": "string"
+      },
+      "modification": {
+        "title": "Modification",
+        "description": "This content category will be set to this value; use the \"{{content}}\" tag to embed or reference the current content.",
+        "type": "string"
+      }
+    }
+  }
+}

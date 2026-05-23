@@ -1,0 +1,40 @@
+{
+  "title": "Variables",
+  "type": "array",
+  "minItems": 0,
+  "items": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "title": "Name",
+        "description": "Name by which this variable is referenced throughout the stage.",
+        "type": "string"
+      },
+      "initialValue": {
+        "title": "Initial Value",
+        "description": "The initial value for this variable when the stage is loaded.",
+        "type": "string"
+      },
+      "perTurnUpdate": {
+        "title": "Initial Input Update",
+        "description": "The value this variable will be set to immediately following a user's input.",
+        "type": "string"
+      },
+      "postInputUpdate": {
+        "title": "Final Input Update",
+        "description": "The value this variable will be set to after a user's input has been processed (after classifiers have run).",
+        "type": "string"
+      },
+      "preResponseUpdate": {
+        "title": "Initial Response Update",
+        "description": "The value this variable will be set to immediately following a bot's response.",
+        "type": "string"
+      },
+      "postResponseUpdate": {
+        "title": "Final Response Update",
+        "description": "The value this variable will be set to after a bot's response has been processed (after classifiers have run).",
+        "type": "string"
+      }
+    }
+  }
+}

@@ -1,0 +1,264 @@
+{
+  "title": "Generators",
+  "description": "An array of generators.",
+  "type": "array",
+  "minItems": 0,
+  "items": {
+    "title": "Generator",
+    "description": "A generation task to update variables with.",
+    "type": "object",
+    "properties": {
+      "name": {
+        "title": "Name",
+        "description": "A name for this generator. This is used for internal reference and should be unique.",
+        "type": "string"
+      },
+      "type": {
+        "title": "Type",
+        "description": "The type of content this generator creates: text or images.",
+        "type": "string",
+        "enum": [
+          "Text",
+          "Image",
+          "Image-to-Image"
+        ],
+        "default": "Text"
+      },
+      "phase": {
+        "title": "Phase",
+        "description": "The phase when this generator runs. \"Initialization\" is *every time* the stage starts up--please include a condition to avoid needless LLM calls.",
+        "type": "string",
+        "enum": [
+          "On Input",
+          "On Response"
+        ]
+      },
+      "lazy": {
+        "title": "Lazy",
+        "description": "Lazy generators are fired during their phase, but don't hold up the chat; this can be useful for generating content in the background. Bear in mind that this can cause inconsistencies across swipes and other activity that occurs between kick-off and completion.",
+        "type": "boolean",
+        "default": false
+      },
+      "condition": {
+        "title": "Condition",
+        "description": "This generator only runs if this condition is met. Generators are calls to the LLM, so minimizing utilization is strongly recommended.",
+        "type": "string"
+      },
+      "dependencies": {
+        "title": "Dependencies",
+        "description": "A comma-delimited list of classifier or generator names that must run before this generator can trigger.",
+        "type": "string"
+      },
+      "prompt": {
+        "title": "Prompt",
+        "description": "The prompt to send to the LLM.",
+        "type": "string"
+      },
+      "updates": {
+        "title": "Updates",
+        "description": "An array of variable updates to make based on this generator's response content.",
+        "type": "array",
+        "minItems": 0,
+        "items": {
+          "title": "Update",
+          "description": "An update to make to a variable based on this generator's response content.",
+          "type": "object",
+          "properties": {
+            "variable": {
+              "title": "Variable",
+              "description": "Name of the variable to update.",
+              "type": "string"
+            },
+            "setTo": {
+              "title": "Set To",
+              "description": "Value to update this variable to when this generation completes--can reference the response with {{content}}.",
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "if": {
+      "properties": {
+        "type": {
+          "const": "Text"
+        }
+      }
+    },
+    "then": {
+      "properties": {
+        "includeHistory": {
+          "title": "Include History",
+          "description": "When true, chat history will be included with the prompt.",
+          "type": "boolean"
+        },
+        "historyContextSize": {
+          "title": "History Context Size",
+          "description": "The context limit for this request (0 defers to preset size). This is only used when Include History is true, and primarily scales down the provided history.",
+          "default": 0,
+          "type": "number"
+        },
+        "minTokens": {
+          "title": "Minimum Response Tokens",
+          "description": "Minimum token size requested for this response.",
+          "default": 50,
+          "type": "string"
+        },
+        "maxTokens": {
+          "title": "Maximum Response Tokens",
+          "description": "Maximum token size requested for this response.",
+          "default": 250,
+          "type": "string"
+        },
+        "retryCondition": {
+          "title": "Retry Condition",
+          "description": "If this resolves to true after the generator runs, the generator will be retried. Generally, this should involve {{content}} in some way.",
+          "default": "",
+          "type": "string"
+        },
+        "stoppingStrings": {
+          "title": "Stopping Strings",
+          "description": "Comma-delimited stopping strings for the request; if the LLM produces one of these strings, it will end the response.",
+          "default": "",
+          "type": "string"
+        }
+      }
+    },
+    "else": {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "Image"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "negativePrompt": {
+            "title": "Negative Prompt",
+            "description": "Content that is undesired in the final image.",
+            "type": "string"
+          },
+          "removeBackground": {
+            "title": "Remove Background",
+            "description": "When true, an attempt will be made to remove the background from the generated image.",
+            "type": "boolean"
+          },
+          "aspectRatio": {
+            "title": "Aspect Ratio",
+            "description": "The desired aspect ratio for the generated image.",
+            "type": "string",
+            "anyOf": [
+              {
+                "type": "string",
+                "title": "Cinematic Horizontal (21:9)",
+                "enum": [
+                  "21:9"
+                ]
+              },
+              {
+                "type": "string",
+                "title": "Widescreen Horizontal (16:9)",
+                "enum": [
+                  "16:9"
+                ]
+              },
+              {
+                "type": "string",
+                "title": "Photo Horizontal (3:2)",
+                "enum": [
+                  "3:2"
+                ]
+              },
+              {
+                "type": "string",
+                "title": "Post Horizontal (5:4)",
+                "enum": [
+                  "5:4"
+                ]
+              },
+              {
+                "type": "string",
+                "title": "Square (1:1)",
+                "enum": [
+                  "1:1"
+                ]
+              },
+              {
+                "type": "string",
+                "title": "Post Vertical (4:5)",
+                "enum": [
+                  "4:5"
+                ]
+              },
+              {
+                "type": "string",
+                "title": "Photo Vertical (2:3)",
+                "enum": [
+                  "2:3"
+                ]
+              },
+              {
+                "type": "string",
+                "title": "Widescreen Vertical (9:16)",
+                "enum": [
+                  "9:16"
+                ]
+              },
+              {
+                "type": "string",
+                "title": "Cinematic Vertical (9:21)",
+                "enum": [
+                  "9:21"
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "removeBackground": {
+            "title": "Remove Background",
+            "description": "When true, an attempt will be made to remove the background from the generated image.",
+            "type": "boolean"
+          },
+          "sourceImageUrl": {
+            "title": "Source Image URL",
+            "description": "For image-to-image, this field should resolve to an image URL.",
+            "type": "string"
+          },
+          "imageToImageType": {
+            "title": "Image-to-Image Transfer Type",
+            "description": "The type of image-to-image transfer to perform; \"edit\" is recommended for most purposes.",
+            "type": "string",
+            "default": "edit",
+            "anyOf": [
+              {
+                "type": "string",
+                "title": "Edit (Qwen)",
+                "enum": [
+                  "edit"
+                ]
+              },
+              {
+                "type": "string",
+                "title": "Canny (Flux)",
+                "enum": [
+                  "canny"
+                ]
+              },
+              {
+                "type": "string",
+                "title": "Face (Flux)",
+                "enum": [
+                  "face"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

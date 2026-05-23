@@ -1,0 +1,132 @@
+{
+  "title": "Classifiers",
+  "description": "An array of classifiers.",
+  "type": "array",
+  "minItems": 0,
+  "items": {
+    "title": "Classifier",
+    "description": "A classification task to apply to input or responses.",
+    "type": "object",
+    "properties": {
+      "name": {
+        "title": "Name",
+        "description": "A name for this classifier.",
+        "type": "string"
+      },
+      "condition": {
+        "title": "Condition",
+        "description": "This classifier is only applied when this condition resolves truthily (blank is true). Classifiers are somewhat time-intensive, so avoiding an unnecessary classifier is a good idea.",
+        "type": "string"
+      },
+      "dependencies": {
+        "title": "Dependencies",
+        "description": "A comma-delimited list of classifier or generator names that must run before this classifier can trigger.",
+        "type": "string"
+      },
+      "inputTemplate": {
+        "title": "Input Template",
+        "description": "An optional input template; if set, this classification task will be performed upon inputs.",
+        "type": "string"
+      },
+      "inputHypothesis": {
+        "title": "Input Hypothesis Template",
+        "description": "This is the hypothesis template applied to classifications performed on inputs.",
+        "type": "string"
+      },
+      "responseTemplate": {
+        "title": "Response Template",
+        "description": "An optional response template; if set, this classification task will be performed upon responses.",
+        "type": "string"
+      },
+      "responseHypothesis": {
+        "title": "Response Hypothesis Template",
+        "description": "This is the hypothesis template applied to classifications performed on responses.",
+        "type": "string"
+      },
+      "useLlm" : {
+        "title": "Use LLM",
+        "description": "If true, the user's LLM will be used for classification. This can yield more accurate results for complex classification tasks, but also tends to take longer.",
+        "type": "boolean",
+        "default": false
+      },
+      "useHistory" : {
+        "title": "Use Chat History",
+        "description": "If using the LLM, this will determine whether the chat history is also sent to the model to provide additional context to the classification task. This will increase the request's token count and runtime.",
+        "type": "boolean",
+        "default": false
+      },
+      "historyContextSize": {
+        "title": "History Context Size",
+        "description": "The context limit for this request (0 defers to preset size). This is only used when Use History is true, and primarily scales down the provided history.",
+        "default": 0,
+        "type": "number"
+      },
+      "classifications": {
+        "title": "Classifications",
+        "description": "An array of classifications to test for.",
+        "type": "array",
+        "minItems": 0,
+        "items": {
+          "title": "Classification",
+          "description": "A classification to test for.",
+          "type": "object",
+          "properties": {
+            "label": {
+              "title": "Label",
+              "description": "The label substituted into the hypothesis.",
+              "type": "string"
+            },
+            "condition": {
+              "title": "Condition",
+              "description": "This classification is only included in the task when this condition resolves truthily (blank is true). This allows the label count to be reduced for faster task times.",
+              "type": "string"
+            },
+            "category": {
+              "title": "Category",
+              "description": "If multiple labels share a category, only the highest entailment applies.",
+              "type": "string"
+            },
+            "threshold": {
+              "title": "Threshold",
+              "description":  "The minimum entailment score to apply this classification.",
+              "type": "number",
+              "default": 0.7,
+              "minimum": 0,
+              "maximum": 1,
+              "multipleOf": 0.01
+            },
+            "dynamic": {
+              "title": "Dynamic",
+              "description": "If true, label is evaluated to a string or array of strings, potentially resulting in multiple labels.",
+              "type": "boolean",
+              "default": false
+            },
+            "updates": {
+              "title": "Updates",
+              "description": "An array of variable updates to make when this classification is applied.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "title": "Update",
+                "description": "An update to make to a variable when this classification is applied.",
+                "type": "object",
+                "properties": {
+                  "variable": {
+                    "title": "Variable",
+                    "description": "Name of the variable to update.",
+                    "type": "string"
+                  },
+                  "setTo": {
+                    "title": "Set To",
+                    "description": "Value to update this variable to when this classification is applied.",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
