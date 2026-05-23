@@ -60,7 +60,7 @@ import ElementRow from './ElementRow.vue'
 import PromoteRecipeDialog from './PromoteRecipeDialog.vue'
 
 const props = defineProps<{ instance: RecipeInstance }>()
-const emit = defineEmits<{ remove: [id: string]; change: [] }>()
+const emit = defineEmits<{ remove: [id: string]; change: []; 'export-url': [id: string] }>()
 
 const recipesStore = useRecipesStore()
 
@@ -103,8 +103,7 @@ function onPromote() {
 
 function onExportUrl() {
   menuOpen.value = false
-  // URL sharing comes in v2.3
-  alert('Export as URL — implemented in v2.3')
+  emit('export-url', props.instance.id)
 }
 
 const clickOutsideHandlers = new WeakMap<HTMLElement, (e: MouseEvent) => void>()

@@ -4,6 +4,18 @@
     :class="embedded ? 'h-[600px] relative' : 'h-screen'"
   >
     <TopBar v-if="!embedded" />
+    <!-- Recipe-install confirmation banner -->
+    <div
+      v-if="rcpBanner"
+      class="flex items-center gap-3 px-4 py-2 bg-indigo-900/80 border-b border-indigo-700 text-sm text-indigo-100"
+    >
+      <span>Recipe "<strong>{{ rcpBanner.name }}</strong>" added to your library.</span>
+      <button
+        class="ml-auto px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs"
+        @click="addInstanceNow"
+      >Add an instance now</button>
+      <button class="text-indigo-300 hover:text-white text-xs ml-2" @click="rcpBanner = null">&times;</button>
+    </div>
     <StreamCanvas :class="embedded ? 'pt-0' : ''" />
     <a
       v-if="embedded"
@@ -16,7 +28,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch, computed } from 'vue'
+import { onMounted, watch, computed, ref } from 'vue'
 import TopBar from './TopBar.vue'
 import StreamCanvas from './StreamCanvas.vue'
 import { hydrateFromLocation } from '../share/hydrate'
@@ -38,6 +50,15 @@ const props = withDefaults(defineProps<{
 })
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
+
+const rcpBanner = ref<{ recipeId: string; name: string } | null>(null)
+
+function addInstanceNow() {
+  if (!rcpBanner.value) return
+  const recipesStore = useRecipesStore()
+  recipesStore.addInstance(rcpBanner.value.recipeId)
+  rcpBanner.value = null
+}
 
 const openInStudioUrl = computed(() => {
   if (typeof window === 'undefined') return props.spaUrl
@@ -72,7 +93,10 @@ onMounted(() => {
     }
   } else {
     if (typeof window !== 'undefined') {
-      hydrateFromLocation()
+      const result = hydrateFromLocation()
+      if (result.kind === 'recipe') {
+        rcpBanner.value = { recipeId: result.recipeId, name: result.recipeName }
+      }
     }
   }
 
