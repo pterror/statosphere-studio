@@ -1,7 +1,7 @@
 <template>
   <header class="flex items-center gap-2 px-4 py-2 bg-gray-900 border-b border-gray-800 shrink-0">
     <span class="font-semibold text-indigo-400 mr-auto">Statosphere Studio</span>
-    <button class="btn-action" @click="addRecipeOpen = true">+ Recipe</button>
+    <button class="btn-action" @click="emit('toggle-browse')">Browse ▾</button>
     <button class="btn-action" @click="addElement">+ Element</button>
     <span
       :title="validityTitle"
@@ -28,7 +28,6 @@
     <button class="btn-action" title="Settings" @click="settingsOpen = true">⚙</button>
     <ShareDialog v-model:open="shareOpen" />
     <ImportDialog v-model:open="importOpen" />
-    <AddRecipeOverlay v-model:open="addRecipeOpen" />
     <SettingsModal v-model:open="settingsOpen" />
     <GraphModal v-model:open="graphOpen" />
   </header>
@@ -46,18 +45,21 @@ import {
 import ShareDialog from './ShareDialog.vue'
 import ImportDialog from './ImportDialog.vue'
 import SaveMenu from './SaveMenu.vue'
-import AddRecipeOverlay from './AddRecipeOverlay.vue'
 import SettingsModal from './SettingsModal.vue'
 import GraphModal from './GraphModal.vue'
 import { useConfigStore } from '../stores/config'
 import { useRecipesStore } from '../stores/recipes'
+
+const emit = defineEmits<{
+  (e: 'toggle-browse'): void
+  (e: 'open-library-modal'): void
+}>()
 
 const configStore = useConfigStore()
 const recipesStore = useRecipesStore()
 
 const shareOpen = ref(false)
 const importOpen = ref(false)
-const addRecipeOpen = ref(false)
 const settingsOpen = ref(false)
 const graphOpen = ref(false)
 
@@ -106,12 +108,12 @@ function downloadJson() {
 function onGlobalKeydown(e: KeyboardEvent) {
   const tag = (document.activeElement as HTMLElement)?.tagName?.toLowerCase()
   const isInput = tag === 'input' || tag === 'textarea' || (document.activeElement as HTMLElement)?.isContentEditable
-  const anyOpen = addRecipeOpen.value || settingsOpen.value || graphOpen.value || shareOpen.value || importOpen.value
+  const anyOpen = settingsOpen.value || graphOpen.value || shareOpen.value || importOpen.value
 
   if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-    if (!anyOpen && !isInput) {
+    if (!isInput) {
       e.preventDefault()
-      addRecipeOpen.value = true
+      emit('open-library-modal')
     }
   }
   if (e.key === 'g' && !isInput && !anyOpen) {

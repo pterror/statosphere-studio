@@ -3,7 +3,7 @@
     class="flex flex-col bg-gray-950 text-gray-100 font-sans"
     :class="embedded ? 'h-[600px] relative' : 'h-screen'"
   >
-    <TopBar v-if="!embedded" />
+    <TopBar v-if="!embedded" @toggle-browse="onToggleBrowse" @open-library-modal="libraryModalOpen = true" />
     <!-- Recipe-install confirmation banner -->
     <div
       v-if="rcpBanner"
@@ -16,7 +16,16 @@
       >Add an instance now</button>
       <button class="text-indigo-300 hover:text-white text-xs ml-2" @click="rcpBanner = null">&times;</button>
     </div>
-    <StreamCanvas :class="embedded ? 'pt-0' : ''" />
+    <StreamCanvas ref="canvasRef" :class="embedded ? 'pt-0' : ''" @open-library-modal="libraryModalOpen = true" />
+    <!-- cmd-K modal -->
+    <Teleport to="body">
+      <div v-if="libraryModalOpen" class="fixed inset-0 z-50 flex items-start justify-center pt-[12vh]" @mousedown.self="libraryModalOpen = false">
+        <div class="fixed inset-0 bg-black/60" @mousedown="libraryModalOpen = false" />
+        <div class="relative z-10 bg-gray-900 border border-gray-700 rounded-xl w-[620px] max-w-[90vw] shadow-2xl flex flex-col overflow-hidden">
+          <RecipeLibrary display="modal" @add="onModalAdd" @close="libraryModalOpen = false" />
+        </div>
+      </div>
+    </Teleport>
     <a
       v-if="embedded"
       :href="openInStudioUrl"
@@ -31,6 +40,7 @@
 import { onMounted, watch, computed, ref } from 'vue'
 import TopBar from './TopBar.vue'
 import StreamCanvas from './StreamCanvas.vue'
+import RecipeLibrary from './RecipeLibrary.vue'
 import { hydrateFromLocation } from '../share/hydrate'
 import { encodeConfig, decodeConfig } from '../share/encode'
 import { useConfigStore } from '../stores/config'
@@ -54,12 +64,31 @@ const props = withDefaults(defineProps<{
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
 const rcpBanner = ref<{ recipeId: string; name: string } | null>(null)
+const libraryModalOpen = ref(false)
+const canvasRef = ref<InstanceType<typeof StreamCanvas> | null>(null)
 
 function addInstanceNow() {
   if (!rcpBanner.value) return
   const recipesStore = useRecipesStore()
   recipesStore.addInstance(rcpBanner.value.recipeId)
   rcpBanner.value = null
+}
+
+function onToggleBrowse() {
+  const recipesStore = useRecipesStore()
+  if (recipesStore.instances.length === 0) {
+    // Inline library is visible — focus its search input via the canvas ref
+    // Best-effort: open modal as fallback since inline library doesn't have a direct focus ref here
+    libraryModalOpen.value = true
+  } else {
+    canvasRef.value?.openBrowseStrip()
+  }
+}
+
+function onModalAdd(recipeId: string) {
+  const recipesStore = useRecipesStore()
+  recipesStore.addInstance(recipeId)
+  libraryModalOpen.value = false
 }
 
 const openInStudioUrl = computed(() => {
