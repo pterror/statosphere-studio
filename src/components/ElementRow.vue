@@ -4,6 +4,13 @@
       class="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-800 rounded cursor-pointer"
       @click="toggleExpanded"
     >
+      <span
+        v-if="dragSource"
+        class="text-gray-700 hover:text-gray-400 cursor-grab active:cursor-grabbing shrink-0 select-none text-xs"
+        title="Drag to move to another block"
+        v-bind="dragSource"
+        @click.stop
+      >⠿</span>
       <span class="text-xs text-gray-500 w-20 shrink-0">{{ typeLabel }}</span>
       <span class="text-sm text-gray-200 truncate flex-1">{{ displayName }}</span>
       <span v-if="isPinned" class="text-xs text-amber-400 shrink-0" title="Edited manually — survives recipe param changes">pinned ●</span>
@@ -40,6 +47,7 @@ import ClassifierForm from './forms/ClassifierForm.vue'
 import GeneratorForm from './forms/GeneratorForm.vue'
 import ContentRuleForm from './forms/ContentRuleForm.vue'
 import FunctionDefForm from './forms/FunctionDefForm.vue'
+import { makeDragSource } from '../composables/use-dnd'
 
 const props = defineProps<{
   elementType: ElementType
@@ -52,6 +60,18 @@ const emit = defineEmits<{ change: [] }>()
 const recipesStore = useRecipesStore()
 const expanded = ref(props.initialExpanded ?? false)
 
+const elementName = computed(() => props.element?.name ?? props.element?.category ?? '')
+
+const dragSource = computed(() => {
+  if (!props.instanceId || !elementName.value) return null
+  return makeDragSource({
+    kind: 'element',
+    instanceId: props.instanceId,
+    elementType: props.elementType,
+    elementName: elementName.value,
+  })
+})
+
 const TYPE_LABELS: Record<ElementType, string> = {
   variables: 'var',
   classifiers: 'classifier',
@@ -63,12 +83,11 @@ const TYPE_LABELS: Record<ElementType, string> = {
 const typeLabel = TYPE_LABELS[props.elementType]
 const displayName = computed(() => props.element?.name ?? props.element?.category ?? '(unnamed)')
 
-const pinnedName = computed(() => props.element?.name ?? props.element?.category ?? '')
 
 const isPinned = computed(() => {
   if (!props.instanceId) return false
   const inst = recipesStore.instances.find(i => i.id === props.instanceId)
-  return inst?.pinned.some(p => p.elementType === props.elementType && p.elementName === pinnedName.value) ?? false
+  return inst?.pinned.some(p => p.elementType === props.elementType && p.elementName === elementName.value) ?? false
 })
 
 function toggleExpanded() {
@@ -76,17 +95,17 @@ function toggleExpanded() {
 }
 
 function onEdit() {
-  if (props.instanceId && !isPinned.value && pinnedName.value) {
-    recipesStore.pinElement(props.instanceId, props.elementType, pinnedName.value)
-  } else if (props.instanceId && isPinned.value && pinnedName.value) {
-    recipesStore.updatePinnedElement(props.instanceId, props.elementType, pinnedName.value, JSON.parse(JSON.stringify(props.element)))
+  if (props.instanceId && !isPinned.value && elementName.value) {
+    recipesStore.pinElement(props.instanceId, props.elementType, elementName.value)
+  } else if (props.instanceId && isPinned.value && elementName.value) {
+    recipesStore.updatePinnedElement(props.instanceId, props.elementType, elementName.value, JSON.parse(JSON.stringify(props.element)))
   }
   emit('change')
 }
 
 function unpin() {
-  if (props.instanceId && pinnedName.value) {
-    recipesStore.unpinElement(props.instanceId, props.elementType, pinnedName.value)
+  if (props.instanceId && elementName.value) {
+    recipesStore.unpinElement(props.instanceId, props.elementType, elementName.value)
     emit('change')
   }
 }

@@ -1,5 +1,5 @@
 <template>
-  <div class="browse-strip">
+  <div class="browse-strip" v-bind="stripFileDropTarget">
     <!-- Collapsed bar -->
     <button
       class="strip-bar"
@@ -37,6 +37,7 @@ import RecipeLibrary from './RecipeLibrary.vue'
 import { listRecipes } from '../recipes/registry'
 import { useRecipesStore } from '../stores/recipes'
 import atoms from '../recipes/builtins/atoms/index'
+import { makeDropTarget } from '../composables/use-dnd'
 
 const emit = defineEmits<{
   (e: 'add', recipeId: string): void
@@ -102,6 +103,28 @@ function focusSearch() {
 function onAdd(recipeId: string) {
   emit('add', recipeId)
   isOpen.value = false
+}
+
+const stripFileDropTarget = makeDropTarget({
+  accept: ['file'],
+  onDrop: (p) => {
+    if (p.kind !== 'file') return
+    handleStripFileDrop(p.file)
+  },
+  onOver: () => { if (!isOpen.value) isOpen.value = true },
+  onLeave: () => {},
+})
+
+async function handleStripFileDrop(file: File) {
+  let text: string
+  try { text = await file.text() } catch { return }
+  let parsed: any
+  try { parsed = JSON.parse(text) } catch { return }
+  if (parsed && typeof parsed === 'object' && parsed.source?.kind) {
+    try {
+      recipesStore.addCustomRecipe(parsed)
+    } catch { /* ignore */ }
+  }
 }
 
 defineExpose({ open, focusSearch })

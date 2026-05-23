@@ -73,4 +73,5 @@ export interface RecipeInstance {
   pinned: PinnedElement[]
   extras: SchemaArrays
   childOverrides?: Record<string, Record<string, unknown>>
+  instanceRefs?: Record<string, ComposedRef[]>
 }

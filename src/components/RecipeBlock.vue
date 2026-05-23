@@ -10,6 +10,13 @@
       class="flex items-center gap-2 px-4 py-2 bg-gray-850 border-b border-gray-800 cursor-pointer hover:bg-gray-800"
       @click="collapsed = !collapsed"
     >
+      <!-- Grip handle -->
+      <span
+        class="text-gray-600 hover:text-gray-300 cursor-grab active:cursor-grabbing shrink-0 select-none"
+        title="Drag to reorder"
+        v-bind="gripDrag"
+        @click.stop
+      >≡</span>
       <span class="text-sm font-medium text-gray-100">{{ instance.name }}</span>
       <span class="text-xs text-gray-500">{{ recipeName }}</span>
 
@@ -96,11 +103,19 @@
     </div>
 
     <!-- Body -->
-    <div v-if="!collapsed">
+    <div
+      v-if="!collapsed"
+      v-bind="bodyDrop"
+      :class="{
+        'ring-2 ring-indigo-500/40': bodyDropActive,
+        'ring-2 ring-red-500/50': bodyDropRejected,
+      }"
+      :style="{ transition: settingsStore.reducedMotion ? 'none' : 'box-shadow 150ms ease-out' }"
+    >
       <!-- Composed: nested sub-blocks -->
       <template v-if="def && def.source.kind === 'composed'">
         <div class="flex flex-col divide-y divide-gray-800">
-          <template v-for="ref in def.source.refs" :key="ref.refId">
+          <template v-for="ref in [...def.source.refs, ...(instance.instanceRefs?.[''] ?? [])]" :key="ref.refId">
             <ComposedChildBlock
               :ref-def="ref"
               :instance="instance"
@@ -171,13 +186,49 @@ import ElementRow from './ElementRow.vue'
 import ElementTypePicker from './ElementTypePicker.vue'
 import PromoteRecipeDialog from './PromoteRecipeDialog.vue'
 import ComposedChildBlock from './ComposedChildBlock.vue'
+import { makeDragSource, makeDropTarget, currentDrag } from '../composables/use-dnd'
+import { useSettingsStore } from '../stores/settings'
 
 const props = defineProps<{ instance: RecipeInstance }>()
-const emit = defineEmits<{ remove: [id: string]; change: []; 'export-url': [id: string] }>()
+const emit = defineEmits<{ remove: [id: string]; change: []; 'export-url': [id: string]; 'element-drop': [srcId: string, tgtId: string, et: string, name: string] }>()
 
 const recipesStore = useRecipesStore()
+const settingsStore = useSettingsStore()
 
 const collapsed = ref(false)
+const bodyDropActive = ref(false)
+const bodyDropRejected = ref(false)
+
+const gripDrag = makeDragSource({ kind: 'block', instanceId: props.instance.id }, { ghostText: props.instance.name })
+
+const bodyDrop = makeDropTarget({
+  accept: ['element', 'atom-card'],
+  onDrop: (p, _e) => {
+    bodyDropActive.value = false
+    if (p.kind === 'element') {
+      emit('element-drop', p.instanceId, props.instance.id, p.elementType, p.elementName)
+    } else if (p.kind === 'atom-card') {
+      const def = getRecipe(props.instance.recipeId)
+      if (!def || def.source.kind !== 'composed') {
+        bodyDropRejected.value = true
+        setTimeout(() => { bodyDropRejected.value = false }, 600)
+        return
+      }
+      const refId = p.recipeId.replace(/[^a-z0-9]/g, '_') + '_' + Date.now()
+      const atomDef = getRecipe(p.recipeId)
+      const newRef: ComposedRef = {
+        refId,
+        recipeId: p.recipeId,
+        defaultName: atomDef?.name ?? p.recipeId,
+        paramBindings: {},
+      }
+      recipesStore.addComposedRefToInstance(props.instance.id, '', newRef)
+      emit('change')
+    }
+  },
+  onOver: () => { bodyDropActive.value = true },
+  onLeave: () => { bodyDropActive.value = false },
+})
 const menuOpen = ref(false)
 const promoteOpen = ref(false)
 const menuTriggerRef = ref<HTMLButtonElement | null>(null)

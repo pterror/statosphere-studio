@@ -131,18 +131,18 @@ function materializeRecipe(
   ctx: MaterializeCtx,
 ): SchemaArrays {
   if (def.source.kind === 'composed') {
-    // Build a cross-child rename map so siblings can reference each other's elements.
-    // We need to know the actual emitted names per child, which requires materializing
-    // each child first (or using their locals). We do a lightweight pre-pass using locals.
+    const parentRefIdPathKey = ctx.refIdPath.join('.')
+    const instanceRefsAtLevel = ctx.instance.instanceRefs?.[parentRefIdPathKey] ?? []
+    const allRefs = [...def.source.refs, ...instanceRefsAtLevel]
+
     const crossRefMap: RenameMap = { variables: {}, classifiers: {}, generators: {}, functions: {} }
-    for (const ref of def.source.refs) {
+    for (const ref of allRefs) {
       const childDef = getRecipe(ref.recipeId)
       if (!childDef) continue
       const childSlugPrefix = ctx.slugPrefix + '_' + ref.refId
       const refIdPath = [...ctx.refIdPath, ref.refId]
       const childOverrides = ctx.instance.childOverrides?.[refIdPath.join('.')]
       const childParams = resolveChildParams(ref, params, childOverrides)
-      // Derive actual locals by materializing the child's bare output.
       const childLocals = getActualLocals(childDef, childParams)
       for (const k of ['variables', 'classifiers', 'generators', 'functions'] as const) {
         for (const n of childLocals[k]) {
@@ -152,7 +152,7 @@ function materializeRecipe(
     }
 
     const acc = emptyArrays()
-    for (const ref of def.source.refs) {
+    for (const ref of allRefs) {
       const refIdPath = [...ctx.refIdPath, ref.refId]
       const childOverrides = ctx.instance.childOverrides?.[refIdPath.join('.')]
       const childParams = resolveChildParams(ref, params, childOverrides)
@@ -166,7 +166,6 @@ function materializeRecipe(
       })
       mergeArrays(acc, childArrays)
     }
-    // Apply cross-child rewrite so sibling references in expression fields are resolved.
     return rewriteRefs(acc, crossRefMap)
   }
 

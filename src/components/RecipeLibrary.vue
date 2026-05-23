@@ -45,7 +45,7 @@
         draggable="true"
         @mouseenter="selectedIndex = i"
         @click="addRecipe(item.def.id)"
-        @dragstart="onDragStart($event, item.def.id)"
+        @dragstart="onDragStart($event, item)"
         @dragend="onDragEnd"
       >
         <div class="flex items-center gap-2 mb-1">
@@ -74,6 +74,7 @@ import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { listRecipes } from '../recipes/registry'
 import { useRecipesStore } from '../stores/recipes'
 import atoms from '../recipes/builtins/atoms/index'
+import { makeDragSource } from '../composables/use-dnd'
 
 const props = defineProps<{
   display: 'inline' | 'strip' | 'modal'
@@ -203,11 +204,21 @@ function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Enter') { addSelected(); e.preventDefault() }
 }
 
-function onDragStart(e: DragEvent, recipeId: string) {
-  e.dataTransfer?.setData('application/x-statosphere-recipe', recipeId)
+function getDragSource(item: ListItem) {
+  const kind = item.kind === 'atom' ? 'atom-card' : 'recipe-card'
+  return makeDragSource({ kind, recipeId: item.def.id } as any, { ghostText: item.def.name })
 }
 
-function onDragEnd(_e: DragEvent) {}
+function onDragStart(e: DragEvent, item: ListItem) {
+  const src = getDragSource(item)
+  src.onDragStart(e)
+}
+
+function onDragEnd(e: DragEvent) {
+  // currentDrag cleared by makeDragSource onDragEnd; nothing extra needed
+  const src = makeDragSource({ kind: 'recipe-card', recipeId: '' })
+  src.onDragEnd(e)
+}
 
 function focusSearch() {
   nextTick(() => searchInput.value?.focus())

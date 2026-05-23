@@ -9,11 +9,12 @@ interface SettingsState {
   trustedPrefixes: string[]
   defaultExpandAdvanced: boolean
   stripPrefixOnExport: boolean
+  reducedMotion: boolean
 }
 
 function load(): SettingsState {
   if (typeof window === 'undefined') {
-    return { theme: 'auto', trustedPrefixes: [...DEFAULT_TRUSTED_PREFIXES], defaultExpandAdvanced: false, stripPrefixOnExport: false }
+    return { theme: 'auto', trustedPrefixes: [...DEFAULT_TRUSTED_PREFIXES], defaultExpandAdvanced: false, stripPrefixOnExport: false, reducedMotion: false }
   }
   try {
     const raw = localStorage.getItem(SETTINGS_KEY)
@@ -24,9 +25,10 @@ function load(): SettingsState {
       trustedPrefixes: parsed.trustedPrefixes ?? [...DEFAULT_TRUSTED_PREFIXES],
       defaultExpandAdvanced: parsed.defaultExpandAdvanced ?? false,
       stripPrefixOnExport: parsed.stripPrefixOnExport ?? false,
+      reducedMotion: parsed.reducedMotion ?? false,
     }
   } catch {
-    return { theme: 'auto', trustedPrefixes: [...DEFAULT_TRUSTED_PREFIXES], defaultExpandAdvanced: false, stripPrefixOnExport: false }
+    return { theme: 'auto', trustedPrefixes: [...DEFAULT_TRUSTED_PREFIXES], defaultExpandAdvanced: false, stripPrefixOnExport: false, reducedMotion: false }
   }
 }
 
@@ -41,12 +43,13 @@ export const useSettingsStore = defineStore('settings', () => {
   const trustedPrefixes = ref<string[]>(initial.trustedPrefixes)
   const defaultExpandAdvanced = ref(initial.defaultExpandAdvanced)
   const stripPrefixOnExport = ref(initial.stripPrefixOnExport)
+  const reducedMotion = ref(initial.reducedMotion)
 
   function persist() {
-    save({ theme: theme.value, trustedPrefixes: trustedPrefixes.value, defaultExpandAdvanced: defaultExpandAdvanced.value, stripPrefixOnExport: stripPrefixOnExport.value })
+    save({ theme: theme.value, trustedPrefixes: trustedPrefixes.value, defaultExpandAdvanced: defaultExpandAdvanced.value, stripPrefixOnExport: stripPrefixOnExport.value, reducedMotion: reducedMotion.value })
   }
 
-  watch([theme, trustedPrefixes, defaultExpandAdvanced, stripPrefixOnExport], persist, { deep: true })
+  watch([theme, trustedPrefixes, defaultExpandAdvanced, stripPrefixOnExport, reducedMotion], persist, { deep: true })
 
   function addTrustedPrefix(prefix: string) {
     if (prefix && !trustedPrefixes.value.includes(prefix)) {
@@ -87,6 +90,7 @@ export const useSettingsStore = defineStore('settings', () => {
     trustedPrefixes,
     defaultExpandAdvanced,
     stripPrefixOnExport,
+    reducedMotion,
     addTrustedPrefix,
     removeTrustedPrefix,
     setTheme,

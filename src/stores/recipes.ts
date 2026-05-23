@@ -71,7 +71,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     saveToStorage(instances.value)
   }
 
-  function addInstance(recipeId: string): string {
+  function addInstance(recipeId: string, atIndex?: number): string {
     const recipe = getRecipe(recipeId)
     if (!recipe) return ''
     const defaults: Record<string, unknown> = {}
@@ -79,16 +79,85 @@ export const useRecipesStore = defineStore('recipes', () => {
       defaults[p.key] = p.default
     }
     const id = crypto.randomUUID()
-    instances.value.push({
+    const inst: RecipeInstance = {
       id,
       recipeId,
       name: recipe.name,
       params: defaults,
       pinned: [],
       extras: emptyArrays(),
-    })
+    }
+    if (atIndex !== undefined && atIndex >= 0 && atIndex <= instances.value.length) {
+      instances.value.splice(atIndex, 0, inst)
+    } else {
+      instances.value.push(inst)
+    }
     persist()
     return id
+  }
+
+  function reorderInstance(instanceId: string, newIndex: number): void {
+    const idx = instances.value.findIndex((i) => i.id === instanceId)
+    if (idx === -1) return
+    const [inst] = instances.value.splice(idx, 1)
+    const clampedIndex = Math.max(0, Math.min(newIndex, instances.value.length))
+    instances.value.splice(clampedIndex, 0, inst)
+    persist()
+  }
+
+  function addComposedRefToInstance(instanceId: string, refIdPath: string, ref: import('../recipes/types').ComposedRef): void {
+    const inst = instances.value.find((i) => i.id === instanceId)
+    if (!inst) return
+    if (!inst.instanceRefs) inst.instanceRefs = {}
+    if (!inst.instanceRefs[refIdPath]) inst.instanceRefs[refIdPath] = []
+    inst.instanceRefs[refIdPath].push(ref)
+    persist()
+  }
+
+  function moveElement(
+    sourceInstanceId: string,
+    targetInstanceId: string,
+    elementType: ElementType,
+    elementName: string,
+  ): void {
+    if (sourceInstanceId === targetInstanceId) return
+    const srcInst = instances.value.find((i) => i.id === sourceInstanceId)
+    const tgtInst = instances.value.find((i) => i.id === targetInstanceId)
+    if (!srcInst || !tgtInst) return
+
+    // Determine if element is pinned or in extras
+    const pinnedIdx = srcInst.pinned.findIndex(
+      (p) => p.elementType === elementType && p.elementName === elementName,
+    )
+    let elementData: any = null
+
+    if (pinnedIdx !== -1) {
+      elementData = JSON.parse(JSON.stringify(srcInst.pinned[pinnedIdx].override))
+      srcInst.pinned.splice(pinnedIdx, 1)
+    } else {
+      const extrasIdx = srcInst.extras[elementType].findIndex(
+        (el: any) => (el?.name ?? el?.category) === elementName,
+      )
+      if (extrasIdx !== -1) {
+        elementData = JSON.parse(JSON.stringify(srcInst.extras[elementType][extrasIdx]))
+        srcInst.extras[elementType].splice(extrasIdx, 1)
+      } else {
+        // Materialized-from-recipe but not pinned — pin first, then move
+        const recipe = getRecipe(srcInst.recipeId)
+        if (!recipe) return
+        const mat =
+          recipe.source.kind === 'builtin'
+            ? recipe.source.materialize(srcInst.params)
+            : materializeInstances([srcInst])
+        const el = mat[elementType].find((e: any) => e?.name === elementName)
+        if (!el) return
+        elementData = JSON.parse(JSON.stringify(el))
+      }
+    }
+
+    if (elementData === null) return
+    tgtInst.extras[elementType].push(elementData)
+    persist()
   }
 
   function removeInstance(id: string): void {
@@ -225,6 +294,9 @@ export const useRecipesStore = defineStore('recipes', () => {
     materialized,
     focusedInstanceId,
     addInstance,
+    reorderInstance,
+    addComposedRefToInstance,
+    moveElement,
     removeInstance,
     renameInstance,
     duplicateInstance,
