@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import type { ConfigTree } from './config'
 
 const DRAFTS_KEY = 'statosphere-studio:drafts:v1'
@@ -67,5 +67,23 @@ export const useDraftsStore = defineStore('drafts', () => {
     }
   }
 
-  return { slots, save, load, rename, delete: deleteDraft, saveScratch, loadScratch }
+  const list = computed(() => Object.values(slots.value))
+
+  function mergeSlots(incoming: DraftSlot[]): void {
+    for (const slot of incoming) {
+      if (!slots.value[slot.name]) {
+        slots.value[slot.name] = slot
+      }
+    }
+    saveToStorage(slots.value)
+  }
+
+  function replaceSlots(incoming: DraftSlot[]): void {
+    const next: Record<string, DraftSlot> = {}
+    for (const slot of incoming) next[slot.name] = slot
+    slots.value = next
+    saveToStorage(slots.value)
+  }
+
+  return { slots, list, save, load, rename, delete: deleteDraft, saveScratch, loadScratch, mergeSlots, replaceSlots }
 })

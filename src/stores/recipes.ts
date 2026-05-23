@@ -371,6 +371,30 @@ export const useRecipesStore = defineStore('recipes', () => {
     })
   }
 
+  function mergeFrom(importedInstances: RecipeInstance[], importedLibrary: RecipeDef[]): void {
+    const existingIds = new Set(instances.value.map(i => i.id))
+    for (const inst of importedInstances) {
+      if (!existingIds.has(inst.id)) instances.value.push(inst)
+    }
+    persist()
+    const existingLibIds = new Set(customLibrary.value.map(d => d.id))
+    for (const def of importedLibrary) {
+      if (!existingLibIds.has(def.id)) {
+        customLibrary.value.push(def)
+        registerRecipe(def)
+      }
+    }
+    saveLibrary(customLibrary.value)
+  }
+
+  function replaceFrom(importedInstances: RecipeInstance[], importedLibrary: RecipeDef[]): void {
+    instances.value.splice(0, instances.value.length, ...importedInstances)
+    persist()
+    customLibrary.value.splice(0, customLibrary.value.length, ...importedLibrary)
+    for (const def of importedLibrary) registerRecipe(def)
+    saveLibrary(customLibrary.value)
+  }
+
   // Custom library actions
 
   function addCustomRecipe(def: RecipeDef): void {
@@ -420,5 +444,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     addCustomRecipe,
     removeCustomRecipe,
     renameCustomRecipe,
+    mergeFrom,
+    replaceFrom,
   }
 })

@@ -8,7 +8,7 @@
         <!-- Appearance -->
         <section class="mb-5">
           <h3 class="section-heading">Appearance</h3>
-          <div class="flex gap-2">
+          <div class="flex gap-2 mb-3">
             <button
               v-for="t in (['light', 'dark', 'auto'] as const)"
               :key="t"
@@ -19,6 +19,11 @@
               @click="settings.setTheme(t)"
             >{{ t }}</button>
           </div>
+          <label class="flex items-center gap-3 cursor-pointer text-sm text-gray-300">
+            <input type="checkbox" :checked="settings.reducedMotion" class="w-4 h-4 accent-indigo-500" @change="settings.reducedMotion = !settings.reducedMotion" />
+            Reduce motion
+          </label>
+          <p class="text-xs text-gray-500 mt-1 ml-7">Disable drag-and-drop animations and transitions.</p>
         </section>
 
         <!-- Imports -->
@@ -92,15 +97,15 @@
             </div>
           </div>
 
+          <p class="text-xs text-gray-500 mb-2">Export your studio state first if you want a backup.</p>
           <div class="flex gap-2 flex-wrap">
             <button class="px-3 py-1 rounded text-xs bg-gray-800 border border-gray-700 text-gray-300 hover:bg-gray-700" @click="settings.clearScratchSlot()">Clear scratch slot</button>
-            <button class="px-3 py-1 rounded text-xs bg-red-900/70 border border-red-700 text-red-300 hover:bg-red-800/70" @click="confirmReset">Reset all studio data…</button>
+            <button class="px-3 py-1 rounded text-xs bg-gray-800 border border-gray-700 text-gray-300 hover:bg-gray-700" @click="exportEverything">Export everything…</button>
+            <button ref="importBtn" class="px-3 py-1 rounded text-xs bg-gray-800 border border-gray-700 text-gray-300 hover:bg-gray-700" @click="importBundleClick">Import bundle…</button>
+            <button ref="resetBtn" class="px-3 py-1 rounded text-xs bg-red-900/70 border border-red-700 text-red-300 hover:bg-red-800/70" @click="resetPopoverOpen = true">Reset all studio data…</button>
           </div>
-          <p v-if="resetPending" class="text-xs text-red-400 mt-2">
-            This will wipe all settings, drafts, recipes, and configs. Are you sure?
-            <button class="underline ml-2" @click="settings.resetAll()">Yes, reset</button>
-            <button class="underline ml-2 text-gray-400" @click="resetPending = false">Cancel</button>
-          </p>
+
+          <input ref="fileInput" type="file" accept=".json" class="hidden" @change="onFileChange" />
         </section>
 
         <div class="flex justify-end">
@@ -109,6 +114,44 @@
       </DialogContent>
     </DialogPortal>
   </DialogRoot>
+
+  <!-- Reset confirm -->
+  <ConfirmPopover
+    :anchor="resetBtn"
+    :open="resetPopoverOpen"
+    prompt="This wipes settings, drafts, recipes, and configs."
+    confirmLabel="Yes, reset"
+    tone="danger"
+    @update:open="resetPopoverOpen = $event"
+    @confirm="settings.resetAll()"
+    @cancel="resetPopoverOpen = false"
+  />
+
+  <!-- Import merge/replace choice -->
+  <ConfirmPopover
+    :anchor="importBtn"
+    :open="importPopoverOpen"
+    prompt="Merge with existing data, or replace everything?"
+    confirmLabel="Replace"
+    cancelLabel="Cancel"
+    tone="danger"
+    :extraAction="{ label: 'Merge', onClick: applyMerge }"
+    @update:open="importPopoverOpen = $event"
+    @confirm="startReplace"
+    @cancel="importPopoverOpen = false"
+  />
+
+  <!-- Replace second confirm -->
+  <ConfirmPopover
+    :anchor="importBtn"
+    :open="replaceConfirmOpen"
+    prompt="Replace will overwrite all settings, drafts, recipes, and configs. Sure?"
+    confirmLabel="Yes, replace"
+    tone="danger"
+    @update:open="replaceConfirmOpen = $event"
+    @confirm="applyReplace"
+    @cancel="replaceConfirmOpen = false"
+  />
 </template>
 
 <script setup lang="ts">
@@ -117,23 +160,155 @@ import { DialogRoot, DialogPortal, DialogOverlay, DialogContent, DialogTitle, Di
 import { useSettingsStore } from '../stores/settings'
 import { useDraftsStore } from '../stores/drafts'
 import { useRecipesStore } from '../stores/recipes'
+import { useToastStore } from '../stores/toast'
+import { useUndoStore } from '../stores/undo'
+import ConfirmPopover from './ConfirmPopover.vue'
+import type { RecipeInstance, RecipeDef } from '../recipes/types'
+import type { DraftSlot } from '../stores/drafts'
 
 const open = defineModel<boolean>('open', { default: false })
 
 const settings = useSettingsStore()
 const draftsStore = useDraftsStore()
 const recipesStore = useRecipesStore()
+const toastStore = useToastStore()
+const undoStore = useUndoStore()
 
 const newPrefix = ref('')
-const resetPending = ref(false)
+const resetBtn = ref<HTMLElement | null>(null)
+const resetPopoverOpen = ref(false)
+
+const importBtn = ref<HTMLElement | null>(null)
+const fileInput = ref<HTMLInputElement | null>(null)
+const importPopoverOpen = ref(false)
+const replaceConfirmOpen = ref(false)
+
+let pendingBundle: BundlePayload | null = null
+
+interface BundlePayload {
+  version: 'studio-export-1'
+  exportedAt: string
+  recipes: RecipeInstance[]
+  customLibrary: RecipeDef[]
+  drafts: DraftSlot[]
+  settings: ReturnType<typeof settings.export>
+}
 
 function addPrefix() {
   settings.addTrustedPrefix(newPrefix.value.trim())
   newPrefix.value = ''
 }
 
-function confirmReset() {
-  resetPending.value = true
+function exportEverything() {
+  const date = new Date().toISOString().slice(0, 10)
+  const payload: BundlePayload = {
+    version: 'studio-export-1',
+    exportedAt: new Date().toISOString(),
+    recipes: JSON.parse(JSON.stringify(recipesStore.instances)),
+    customLibrary: JSON.parse(JSON.stringify(recipesStore.customLibrary)),
+    drafts: JSON.parse(JSON.stringify(draftsStore.list)),
+    settings: settings.export(),
+  }
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `statosphere-studio-${date}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+  toastStore.show('Exported studio bundle.')
+}
+
+function importBundleClick() {
+  fileInput.value?.click()
+}
+
+function onFileChange(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  ;(e.target as HTMLInputElement).value = ''
+  const reader = new FileReader()
+  reader.onload = (ev) => {
+    try {
+      const parsed = JSON.parse(ev.target!.result as string)
+      if (parsed.version !== 'studio-export-1') {
+        toastStore.show('Invalid bundle: unrecognized version.', { durationMs: 5000 })
+        return
+      }
+      pendingBundle = parsed as BundlePayload
+      importPopoverOpen.value = true
+    } catch {
+      toastStore.show('Failed to parse bundle file.', { durationMs: 5000 })
+    }
+  }
+  reader.readAsText(file)
+}
+
+function snapshotForUndo() {
+  const snapInstances = JSON.parse(JSON.stringify(recipesStore.instances)) as RecipeInstance[]
+  const snapLibrary = JSON.parse(JSON.stringify(recipesStore.customLibrary)) as RecipeDef[]
+  const snapDrafts = JSON.parse(JSON.stringify(draftsStore.list)) as DraftSlot[]
+  const snapSettings = settings.export()
+  return { snapInstances, snapLibrary, snapDrafts, snapSettings }
+}
+
+function applyMerge() {
+  if (!pendingBundle) return
+  const snap = snapshotForUndo()
+  const bundle = pendingBundle
+  pendingBundle = null
+
+  recipesStore.mergeFrom(bundle.recipes, bundle.customLibrary)
+  draftsStore.mergeSlots(bundle.drafts)
+  settings.importSettings(bundle.settings)
+
+  undoStore.push({
+    label: 'Imported bundle',
+    do: () => {
+      recipesStore.mergeFrom(bundle.recipes, bundle.customLibrary)
+      draftsStore.mergeSlots(bundle.drafts)
+      settings.importSettings(bundle.settings)
+    },
+    undo: () => {
+      recipesStore.replaceFrom(snap.snapInstances, snap.snapLibrary)
+      draftsStore.replaceSlots(snap.snapDrafts)
+      settings.importSettings(snap.snapSettings)
+    },
+  })
+
+  toastStore.show('Imported studio bundle (merged).')
+}
+
+function startReplace() {
+  importPopoverOpen.value = false
+  replaceConfirmOpen.value = true
+}
+
+function applyReplace() {
+  if (!pendingBundle) return
+  const snap = snapshotForUndo()
+  const bundle = pendingBundle
+  pendingBundle = null
+
+  recipesStore.replaceFrom(bundle.recipes, bundle.customLibrary)
+  draftsStore.replaceSlots(bundle.drafts)
+  settings.importSettings(bundle.settings)
+
+  undoStore.push({
+    label: 'Imported bundle (replaced)',
+    do: () => {
+      recipesStore.replaceFrom(bundle.recipes, bundle.customLibrary)
+      draftsStore.replaceSlots(bundle.drafts)
+      settings.importSettings(bundle.settings)
+    },
+    undo: () => {
+      recipesStore.replaceFrom(snap.snapInstances, snap.snapLibrary)
+      draftsStore.replaceSlots(snap.snapDrafts)
+      settings.importSettings(snap.snapSettings)
+    },
+  })
+
+  toastStore.show('Imported studio bundle (replaced).')
 }
 </script>
 

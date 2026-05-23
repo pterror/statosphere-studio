@@ -85,6 +85,24 @@ export const useSettingsStore = defineStore('settings', () => {
     window.location.reload()
   }
 
+  function exportSettings() {
+    return {
+      theme: theme.value,
+      trustedPrefixes: trustedPrefixes.value,
+      defaultExpandAdvanced: defaultExpandAdvanced.value,
+      stripPrefixOnExport: stripPrefixOnExport.value,
+      reducedMotion: reducedMotion.value,
+    }
+  }
+
+  function importSettings(s: Partial<SettingsState>) {
+    if (s.theme) theme.value = s.theme
+    if (s.trustedPrefixes) trustedPrefixes.value = s.trustedPrefixes
+    if (s.defaultExpandAdvanced !== undefined) defaultExpandAdvanced.value = s.defaultExpandAdvanced
+    if (s.stripPrefixOnExport !== undefined) stripPrefixOnExport.value = s.stripPrefixOnExport
+    if (s.reducedMotion !== undefined) reducedMotion.value = s.reducedMotion
+  }
+
   return {
     theme,
     trustedPrefixes,
@@ -97,5 +115,7 @@ export const useSettingsStore = defineStore('settings', () => {
     togglePrefix,
     clearScratchSlot,
     resetAll,
+    export: exportSettings,
+    importSettings,
   }
 })
