@@ -59,6 +59,12 @@ const def: RecipeDef = {
   description: 'Detects fact-worthy responses and accumulates a running fact list.',
   tags: ['memory', 'facts', 'generator', 'classifier'],
   params: [],
+  locals: {
+    variables: ['known_facts', 'fact_count', 'new_fact_pending'],
+    classifiers: ['FactWorthy'],
+    generators: ['ExtractFact'],
+    functions: [],
+  },
   source: { kind: "builtin", materialize: () => JSON.parse(JSON.stringify(data)) },
 }
 

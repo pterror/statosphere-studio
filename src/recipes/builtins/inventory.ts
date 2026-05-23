@@ -60,6 +60,12 @@ const def: RecipeDef = {
   description: 'Maintains four named item slots with a full-inventory lock.',
   tags: ['inventory', 'items', 'classifier'],
   params: [],
+  locals: {
+    variables: ['slot1', 'slot2', 'slot3', 'slot4', 'inventoryFull'],
+    classifiers: ['InventoryEvents'],
+    generators: [],
+    functions: [],
+  },
   source: { kind: "builtin", materialize: () => JSON.parse(JSON.stringify(data)) },
 }
 

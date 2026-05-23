@@ -9,7 +9,7 @@ import addFormats from 'ajv-formats'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import type { RecipeDef, SchemaArrays, ParamSpec } from '../src/recipes/types'
-import { interpretTemplate } from '../src/recipes/materialize'
+import { interpretTemplate, materializeInstances } from '../src/recipes/materialize'
 
 const ROOT = join(import.meta.dir, '..')
 const SCHEMAS_DIR = join(ROOT, 'schemas')
@@ -84,6 +84,115 @@ for (const def of builtins) {
     allPassed = false
   } else {
     console.log(`ok   ${def.id}`)
+  }
+}
+
+if (!allPassed) process.exit(1)
+
+// ── Duplicate-instance test ──────────────────────────────────────────────────
+// Instantiate each recipe twice with distinct display names and verify:
+//   1. No duplicate names across the merged config.
+//   2. Every updates[].variable resolves to a declared variable name.
+//   3. No bare (unprefixed) references remain in expression fields.
+
+console.log('\nDuplicate-instance tests:')
+
+// Fields that contain expression strings referencing variable names.
+const EXPR_FIELDS = ['setTo', 'condition', 'modification', 'prompt', 'inputTemplate', 'inputHypothesis', 'perTurnUpdate', 'postInputUpdate', 'preResponseUpdate', 'postResponseUpdate', 'body']
+
+function collectStrings(obj: any, acc: string[] = []): string[] {
+  if (typeof obj === 'string') { acc.push(obj); return acc }
+  if (Array.isArray(obj)) { for (const v of obj) collectStrings(v, acc); return acc }
+  if (obj && typeof obj === 'object') {
+    for (const [k, v] of Object.entries(obj)) {
+      if (EXPR_FIELDS.includes(k)) collectStrings(v, acc)
+      else if (k !== 'name' && typeof v === 'object') collectStrings(v, acc)
+    }
+  }
+  return acc
+}
+
+function collectUpdatesVariables(obj: any, acc: string[] = []): string[] {
+  if (Array.isArray(obj)) { for (const v of obj) collectUpdatesVariables(v, acc); return acc }
+  if (obj && typeof obj === 'object') {
+    if ('variable' in obj && typeof obj.variable === 'string') acc.push(obj.variable)
+    else for (const v of Object.values(obj)) collectUpdatesVariables(v, acc)
+  }
+  return acc
+}
+
+// Use registry to look up by id — materializeInstances needs the recipe registered.
+import { registerRecipe } from '../src/recipes/registry'
+for (const def of builtins) registerRecipe(def)
+
+for (const def of builtins) {
+  if (def.id === 'custom') {
+    console.log(`skip custom (freeform bucket) [dup test]`)
+    continue
+  }
+
+  const params = defaultParams(def.params)
+  const instances = [
+    { id: 'a', recipeId: def.id, name: def.name + ' A', params, pinned: [], extras: { variables: [], classifiers: [], generators: [], contentRules: [], functions: [] } },
+    { id: 'b', recipeId: def.id, name: def.name + ' B', params, pinned: [], extras: { variables: [], classifiers: [], generators: [], contentRules: [], functions: [] } },
+  ]
+
+  let merged: SchemaArrays
+  try {
+    merged = materializeInstances(instances)
+  } catch (e) {
+    console.error(`FAIL dup ${def.id}: materializeInstances threw — ${(e as Error).message}`)
+    allPassed = false
+    continue
+  }
+
+  const errors: string[] = []
+  const kindArrays: [string, any[]][] = [
+    ['variables', merged.variables],
+    ['classifiers', merged.classifiers],
+    ['generators', merged.generators],
+    ['functions', merged.functions],
+  ]
+
+  // 1. No duplicate names.
+  for (const [kind, arr] of kindArrays) {
+    const seen = new Set<string>()
+    for (const el of arr) {
+      if (!el?.name) continue
+      if (seen.has(el.name)) errors.push(`  duplicate ${kind} name: "${el.name}"`)
+      seen.add(el.name)
+    }
+  }
+
+  // 2. Every updates[].variable that references a recipe-local variable uses the prefixed form.
+  // (External/platform variables like 'background' are allowed through.)
+  const allPrefixedVarNames = new Set(merged.variables.map((v: any) => v?.name).filter(Boolean))
+  const updateVars = collectUpdatesVariables(merged)
+  for (const v of updateVars) {
+    // Only flag if the bare name is a declared local of this recipe (should have been prefixed).
+    if (def.locals.variables.includes(v)) {
+      errors.push(`  updates[].variable "${v}" is a bare local name — should have been prefixed`)
+    }
+  }
+
+  // 3. No bare (unprefixed) original names remain in expression strings.
+  const allStrings = collectStrings(merged)
+  for (const bareName of def.locals.variables) {
+    const re = new RegExp(`\\b${bareName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`)
+    for (const s of allStrings) {
+      if (re.test(s)) {
+        errors.push(`  bare variable reference "${bareName}" found in expression: ${JSON.stringify(s).slice(0, 80)}`)
+        break
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    console.error(`FAIL dup ${def.id}`)
+    for (const e of errors) console.error(e)
+    allPassed = false
+  } else {
+    console.log(`ok   dup ${def.id}`)
   }
 }
 

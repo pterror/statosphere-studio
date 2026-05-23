@@ -30,6 +30,12 @@ const def: RecipeDef = {
   description: 'A turn counter that maps turn ranges to morning, afternoon, evening, and night.',
   tags: ['time', 'proxy', 'ambient'],
   params: [],
+  locals: {
+    variables: ['turn_count', 'time_of_day'],
+    classifiers: [],
+    generators: [],
+    functions: [],
+  },
   source: { kind: "builtin", materialize: () => JSON.parse(JSON.stringify(data)) },
 }
 

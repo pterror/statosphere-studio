@@ -27,12 +27,20 @@ export interface Substitution {
   paramKey: string
 }
 
+export interface Locals {
+  variables: string[]
+  classifiers: string[]
+  generators: string[]
+  functions: string[]
+}
+
 export interface RecipeDef {
   id: string
   name: string
   description: string
   tags?: string[]
   params: ParamSpec[]
+  locals: Locals
   source:
     | { kind: 'builtin'; materialize: (params: Record<string, unknown>) => SchemaArrays }
     | { kind: 'template'; template: SchemaArrays; substitutions: Substitution[] }

@@ -70,6 +70,12 @@ const def: RecipeDef = {
   description: 'Tracks a companion\'s emotional state across the conversation.',
   tags: ['mood', 'classifier', 'companion'],
   params: [],
+  locals: {
+    variables: ['mood', 'moodIntensity'],
+    classifiers: ['MoodShift'],
+    generators: [],
+    functions: [],
+  },
   source: { kind: "builtin", materialize: () => JSON.parse(JSON.stringify(data)) },
 }
 

@@ -73,6 +73,12 @@ const def: RecipeDef = {
   description: 'Clue counter, per-suspect suspicion scores, and a case-solved flag.',
   tags: ['mystery', 'clues', 'suspects', 'classifier'],
   params: [],
+  locals: {
+    variables: ['clues_found', 'suspect_butler', 'suspect_maid', 'suspect_nephew', 'case_solved'],
+    classifiers: ['DiscoveryEvents'],
+    generators: [],
+    functions: [],
+  },
   source: { kind: "builtin", materialize: () => JSON.parse(JSON.stringify(data)) },
 }
 

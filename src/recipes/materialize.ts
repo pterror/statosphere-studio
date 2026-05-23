@@ -1,40 +1,34 @@
-import type { RecipeInstance, SchemaArrays, ElementType, Substitution } from './types'
+import type { RecipeInstance, RecipeDef, SchemaArrays, ElementType, Substitution, Locals } from './types'
+import type { RenameMap } from './rewrite-refs'
+import { rewriteRefs } from './rewrite-refs'
 import { getRecipe } from './registry'
 
-function safeName(prefix: string): string {
-  return prefix.replace(/[^a-zA-Z0-9_]/g, '_').replace(/^_+|_+$/g, '')
+// Lowercase, replace non-alphanumeric runs with _, trim leading/trailing _.
+function slugify(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
 }
 
-function prefixElement(element: any, prefix: string, elementType: ElementType): any {
-  if (!element || typeof element !== 'object') return element
-  const clone = { ...element }
-  if (elementType === 'contentRules') return clone
-  if ('name' in clone && typeof clone.name === 'string' && clone.name) {
-    clone.name = `${prefix}.${clone.name}`
-  }
-  return clone
-}
-
-function stripPrefixFromElement(element: any, elementType: ElementType): any {
-  if (!element || typeof element !== 'object') return element
-  if (elementType === 'contentRules') return { ...element }
-  const clone = { ...element }
-  if ('name' in clone && typeof clone.name === 'string') {
-    // Strip "<prefix>." prefix if present
-    const dotIdx = clone.name.indexOf('.')
-    if (dotIdx !== -1) clone.name = clone.name.slice(dotIdx + 1)
-  }
-  return clone
-}
-
-function mergeArrays(a: SchemaArrays, b: SchemaArrays): SchemaArrays {
+function buildRenameMap(locals: Locals, slug: string): RenameMap {
+  const mapKind = (names: string[]) =>
+    Object.fromEntries(names.map(n => [n, `${slug}_${n}`]))
   return {
-    variables: [...a.variables, ...b.variables],
-    classifiers: [...a.classifiers, ...b.classifiers],
-    generators: [...a.generators, ...b.generators],
-    contentRules: [...a.contentRules, ...b.contentRules],
-    functions: [...a.functions, ...b.functions],
+    variables: mapKind(locals.variables),
+    classifiers: mapKind(locals.classifiers),
+    generators: mapKind(locals.generators),
+    functions: mapKind(locals.functions),
   }
+}
+
+function applyRenameToNames(arrays: SchemaArrays, renameMap: RenameMap): SchemaArrays {
+  const result = structuredClone(arrays)
+  for (const et of ['variables', 'classifiers', 'generators', 'functions'] as const) {
+    const map = renameMap[et as keyof RenameMap]
+    result[et] = result[et].map((el: any) => {
+      if (!el || typeof el !== 'object' || typeof el.name !== 'string') return el
+      return { ...el, name: map[el.name] ?? el.name }
+    })
+  }
+  return result
 }
 
 // Walk a nested object/array by fieldPath and set the leaf to value.
@@ -76,9 +70,20 @@ export function interpretTemplate(
 const ELEMENT_TYPES: ElementType[] = ['variables', 'classifiers', 'generators', 'contentRules', 'functions']
 
 export interface MaterializeOptions {
-  /** When true, element names are emitted without the "<instanceName>." prefix.
+  /** When true, element names are emitted without the instance-slug prefix.
    *  If two recipes produce the same bare name, a numeric suffix (_2, _3, …) is appended. */
   stripPrefix?: boolean
+}
+
+// Derive locals from a template by reading names from each array.
+export function localsFromTemplate(template: SchemaArrays): Locals {
+  const names = (arr: any[]) => arr.map((el: any) => el?.name).filter((n: any) => typeof n === 'string' && n)
+  return {
+    variables: names(template.variables),
+    classifiers: names(template.classifiers),
+    generators: names(template.generators),
+    functions: names(template.functions),
+  }
 }
 
 export function materializeInstances(instances: RecipeInstance[], opts: MaterializeOptions = {}): SchemaArrays {
@@ -90,8 +95,17 @@ export function materializeInstances(instances: RecipeInstance[], opts: Material
     functions: [],
   }
 
-  // Track seen bare names per element type for collision handling when stripPrefix is on.
-  const seenNames: Record<ElementType, Map<string, number>> = {
+  // Track slugs to assign unique suffixes per instance.
+  const slugCounts: Map<string, number> = new Map()
+
+  function assignSlug(base: string): string {
+    const count = (slugCounts.get(base) ?? 0) + 1
+    slugCounts.set(base, count)
+    return count === 1 ? base : `${base}_${count}`
+  }
+
+  // For stripPrefix: track seen bare names per element type for collision dedup.
+  const seenBareNames: Record<ElementType, Map<string, number>> = {
     variables: new Map(),
     classifiers: new Map(),
     generators: new Map(),
@@ -99,53 +113,90 @@ export function materializeInstances(instances: RecipeInstance[], opts: Material
     functions: new Map(),
   }
 
-  function dedupName(et: ElementType, name: string): string {
-    if (!name || et === 'contentRules') return name
-    const seen = seenNames[et]
-    const count = (seen.get(name) ?? 0) + 1
-    seen.set(name, count)
-    return count === 1 ? name : `${name}_${count}`
-  }
+  // Per-instance prefixed→bare maps for stripPrefix rewrite.
+  // After all instances are materialized, we'll build a global rename for stripping.
+  const instancePrefixedLocals: { slug: string; locals: Locals }[] = []
 
   for (const inst of instances) {
     const recipe = getRecipe(inst.recipeId)
     if (!recipe) continue
 
-    let materialized: SchemaArrays
+    let bareArrays: SchemaArrays
     if (recipe.source.kind === 'builtin') {
-      materialized = recipe.source.materialize(inst.params)
+      bareArrays = recipe.source.materialize(inst.params)
     } else {
-      materialized = interpretTemplate(recipe.source.template, recipe.source.substitutions, inst.params)
+      bareArrays = interpretTemplate(recipe.source.template, recipe.source.substitutions, inst.params)
     }
 
-    const prefix = safeName(inst.name) || safeName(inst.recipeId)
+    // Determine locals: declared on def, or derived from template for custom recipes without locals.
+    const locals: Locals = recipe.locals ?? localsFromTemplate(bareArrays)
 
+    const slugBase = slugify(inst.name) || slugify(inst.recipeId) || 'instance'
+    const slug = assignSlug(slugBase)
+    const renameMap = buildRenameMap(locals, slug)
+
+    // Rewrite all identifier references in expression fields.
+    const rewritten = rewriteRefs(bareArrays, renameMap)
+    // Then rename the name fields themselves.
+    const prefixed = applyRenameToNames(rewritten, renameMap)
+
+    // Build pinned map keyed by bare original name (pre-prefix) and prefixed name.
     const pinnedMap = new Map<string, any>()
     for (const p of inst.pinned) {
       pinnedMap.set(`${p.elementType}:${p.elementName}`, p.override)
     }
 
     for (const et of ELEMENT_TYPES) {
-      for (const el of materialized[et]) {
-        const name = el?.name ?? ''
-        const pinned = pinnedMap.get(`${et}:${name}`)
-        let resolved: any
-        if (pinned !== undefined) {
-          resolved = pinned
-        } else if (opts.stripPrefix) {
-          const stripped = stripPrefixFromElement(el, et)
-          if (stripped?.name) stripped.name = dedupName(et, stripped.name)
-          resolved = stripped
-        } else {
-          resolved = prefixElement(el, prefix, et)
-        }
+      for (const el of prefixed[et]) {
+        const prefixedName = el?.name ?? ''
+        // Pinned overrides are keyed by prefixed name (post-rename).
+        const pinned = pinnedMap.get(`${et}:${prefixedName}`)
+        const resolved = pinned !== undefined ? pinned : el
         result[et].push(resolved)
       }
-      for (const el of inst.extras[et]) {
+      // Extras are user-written expecting prefixed identifiers to already exist.
+      // Rewrite extras with the same renameMap so refs resolve correctly.
+      const rewrittenExtras = rewriteRefs(inst.extras, renameMap)
+      for (const el of rewrittenExtras[et]) {
         result[et].push(el)
+      }
+    }
+
+    instancePrefixedLocals.push({ slug, locals })
+  }
+
+  if (opts.stripPrefix) {
+    return stripPrefixes(result, instancePrefixedLocals)
+  }
+
+  return result
+}
+
+function stripPrefixes(
+  arrays: SchemaArrays,
+  prefixedLocals: { slug: string; locals: Locals }[],
+): SchemaArrays {
+  // Build a global rename map: prefixedName → bareName with numeric-suffix collision handling.
+  const seenBare: Map<string, number> = new Map()
+
+  function assignBare(bare: string): string {
+    const count = (seenBare.get(bare) ?? 0) + 1
+    seenBare.set(bare, count)
+    return count === 1 ? bare : `${bare}_${count}`
+  }
+
+  const stripMap: RenameMap = { variables: {}, classifiers: {}, generators: {}, functions: {} }
+
+  for (const { slug, locals } of prefixedLocals) {
+    for (const kind of ['variables', 'classifiers', 'generators', 'functions'] as const) {
+      for (const bareName of locals[kind]) {
+        const prefixed = `${slug}_${bareName}`
+        const deduped = assignBare(bareName)
+        stripMap[kind][prefixed] = deduped
       }
     }
   }
 
-  return result
+  const rewritten = rewriteRefs(arrays, stripMap)
+  return applyRenameToNames(rewritten, stripMap)
 }

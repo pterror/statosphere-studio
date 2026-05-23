@@ -79,6 +79,12 @@ const def: RecipeDef = {
   description: 'Tracks affinity scores for three named NPCs.',
   tags: ['npc', 'affinity', 'classifier', 'relationships'],
   params: [],
+  locals: {
+    variables: ['affinity_innkeeper', 'affinity_merchant', 'affinity_guard', 'last_npc'],
+    classifiers: ['NpcTarget', 'AffinityShift'],
+    generators: [],
+    functions: [],
+  },
   source: { kind: "builtin", materialize: () => JSON.parse(JSON.stringify(data)) },
 }
 

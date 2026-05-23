@@ -78,6 +78,12 @@ const def: RecipeDef = {
   description: 'Models a three-way story branch gated by act.',
   tags: ['branching', 'acts', 'classifier', 'narrative'],
   params: [],
+  locals: {
+    variables: ['currentAct', 'choiceMade', 'actUnlocked'],
+    classifiers: ['SceneGate'],
+    generators: [],
+    functions: [],
+  },
   source: { kind: "builtin", materialize: () => JSON.parse(JSON.stringify(data)) },
 }
 

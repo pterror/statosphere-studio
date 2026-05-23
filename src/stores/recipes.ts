@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import type { RecipeInstance, RecipeDef, ElementType, SchemaArrays } from '../recipes/types'
-import { materializeInstances } from '../recipes/materialize'
+import { materializeInstances, localsFromTemplate } from '../recipes/materialize'
 import { getRecipe, registerRecipe, unregisterRecipe } from '../recipes/registry'
 import { useSettingsStore } from './settings'
 
@@ -33,7 +33,15 @@ function loadLibrary(): RecipeDef[] {
   try {
     const raw = localStorage.getItem(LIBRARY_KEY)
     if (!raw) return []
-    return JSON.parse(raw) as RecipeDef[]
+    const defs = JSON.parse(raw) as RecipeDef[]
+    // Derive locals on read for stored template recipes that predate the locals field.
+    return defs.map(def => {
+      if (def.locals) return def
+      if (def.source.kind === 'template') {
+        return { ...def, locals: localsFromTemplate(def.source.template) }
+      }
+      return { ...def, locals: { variables: [], classifiers: [], generators: [], functions: [] } }
+    })
   } catch {
     return []
   }

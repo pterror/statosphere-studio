@@ -125,6 +125,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import type { RecipeInstance, SchemaArrays, ElementType, RecipeDef, ParamSpec, Substitution } from '../recipes/types'
+import { localsFromTemplate } from '../recipes/materialize'
 import { useRecipesStore } from '../stores/recipes'
 
 const props = defineProps<{
@@ -308,6 +309,7 @@ function onCreate() {
     description: recipeDescription.value.trim(),
     tags,
     params,
+    locals: localsFromTemplate(template),
     source: { kind: 'template', template, substitutions },
   }
 
