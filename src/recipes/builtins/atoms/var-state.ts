@@ -11,8 +11,9 @@ const def: RecipeDef = {
   ],
   locals: { variables: ['state'], classifiers: [], generators: [], functions: [] },
   source: { kind: 'builtin', materialize(params): SchemaArrays {
+    const name = (params.name as string | undefined) ?? 'state'
     const initialValue = (params.initialValue as string | undefined) ?? '"idle"'
-    return { variables: [{ name: 'state', initialValue }], classifiers: [], generators: [], contentRules: [], functions: [] }
+    return { variables: [{ name, initialValue }], classifiers: [], generators: [], contentRules: [], functions: [] }
   } },
 }
 

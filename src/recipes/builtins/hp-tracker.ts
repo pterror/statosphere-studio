@@ -1,4 +1,4 @@
-import type { RecipeDef, SchemaArrays } from '../types'
+import type { RecipeDef } from '../types'
 
 const def: RecipeDef = {
   id: 'hp-tracker',
@@ -10,64 +10,67 @@ const def: RecipeDef = {
     { kind: 'label-list', key: 'damageLabels', label: 'Damage labels', default: ['hit', 'blow', 'slash'] },
     { kind: 'label-list', key: 'healLabels', label: 'Heal labels', default: ['heal', 'bandage', 'potion'] },
   ],
-  locals: {
-    variables: ['hp', 'max_hp'],
-    classifiers: ['CombatEvents'],
-    generators: [],
-    functions: [],
+  locals: { variables: [], classifiers: [], generators: [], functions: [] },
+  source: {
+    kind: 'composed',
+    refs: [
+      {
+        refId: 'hp_var',
+        recipeId: 'atom/var-counter',
+        defaultName: 'HP Variable',
+        paramBindings: {
+          name: { kind: 'literal', value: 'hp' },
+          initialValue: { kind: 'parent', paramKey: 'maxHp' },
+          perTurnUpdate: { kind: 'literal', value: '' },
+        },
+      },
+      {
+        refId: 'max_hp_var',
+        recipeId: 'atom/var-counter',
+        defaultName: 'Max HP Variable',
+        paramBindings: {
+          name: { kind: 'literal', value: 'max_hp' },
+          initialValue: { kind: 'parent', paramKey: 'maxHp' },
+          perTurnUpdate: { kind: 'literal', value: '' },
+        },
+      },
+      {
+        refId: 'damage_cls',
+        recipeId: 'atom/classifier-event-detect',
+        defaultName: 'Damage Classifier',
+        paramBindings: {
+          name: { kind: 'literal', value: 'CombatEvents' },
+          label: { kind: 'derived', expr: 'taking damage — {{damageLabels}}' },
+          category: { kind: 'literal', value: 'health_event' },
+          threshold: { kind: 'literal', value: 0.65 },
+          hypothesis: { kind: 'literal', value: 'The character {}.' },
+          updates: { kind: 'literal', value: [{ variable: 'hp', setTo: 'max(0, hp - 10)' }] },
+        },
+      },
+      {
+        refId: 'heal_cls',
+        recipeId: 'atom/classifier-event-detect',
+        defaultName: 'Heal Classifier',
+        paramBindings: {
+          name: { kind: 'literal', value: 'HealEvents' },
+          label: { kind: 'derived', expr: 'healing or recovering — {{healLabels}}' },
+          category: { kind: 'literal', value: 'health_event' },
+          threshold: { kind: 'literal', value: 0.65 },
+          hypothesis: { kind: 'literal', value: 'The character {}.' },
+          updates: { kind: 'literal', value: [{ variable: 'hp', setTo: 'min(max_hp, hp + 15)' }] },
+        },
+      },
+      {
+        refId: 'status_rule',
+        recipeId: 'atom/rule-status-line',
+        defaultName: 'HP Status',
+        paramBindings: {
+          condition: { kind: 'literal', value: 'true' },
+          template: { kind: 'derived', expr: '"HP: " + hp + "/" + max_hp + ". " + (hp < round({{maxHp}} * 0.15) ? "The character is critically injured." : hp < round({{maxHp}} * 0.3) ? "The character is hurt." : "The character is in reasonable shape.")' },
+        },
+      },
+    ],
   },
-  source: { kind: 'builtin', materialize(params): SchemaArrays {
-    const maxHp = (params.maxHp as number | undefined) ?? 100
-    const damageLabels = (params.damageLabels as string[] | undefined) ?? ['hit', 'blow', 'slash']
-    const healLabels = (params.healLabels as string[] | undefined) ?? ['heal', 'bandage', 'potion']
-
-    const damageLabel = damageLabels.join(', ')
-    const healLabel = healLabels.join(', ')
-
-    return {
-      variables: [
-        { name: 'hp', initialValue: String(maxHp) },
-        { name: 'max_hp', initialValue: String(maxHp) },
-      ],
-      functions: [],
-      classifiers: [
-        {
-          name: 'CombatEvents',
-          inputTemplate: '{{content}}',
-          inputHypothesis: 'The user describes the character {}.',
-          responseTemplate: '{{content}}',
-          responseHypothesis: 'The character {}.',
-          classifications: [
-            {
-              label: `taking damage — ${damageLabel}`,
-              category: 'health_event',
-              threshold: 0.65,
-              updates: [{ variable: 'hp', setTo: 'max(0, hp - 10)' }],
-            },
-            {
-              label: `healing or recovering — ${healLabel}`,
-              category: 'health_event',
-              threshold: 0.65,
-              updates: [{ variable: 'hp', setTo: 'min(max_hp, hp + 15)' }],
-            },
-          ],
-        },
-      ],
-      generators: [],
-      contentRules: [
-        {
-          category: 'Stage Direction',
-          condition: 'true',
-          modification:
-            '"HP: " + hp + "/" + max_hp + ". " + (hp < ' +
-            Math.round(maxHp * 0.15) +
-            ' ? "The character is critically injured." : hp < ' +
-            Math.round(maxHp * 0.30) +
-            ' ? "The character is hurt." : "The character is in reasonable shape.")',
-        },
-      ],
-    }
-  } },
 }
 
 export default def

@@ -14,18 +14,28 @@ const def: RecipeDef = {
   ],
   locals: { variables: [], classifiers: ['EventDetect'], generators: [], functions: [] },
   source: { kind: 'builtin', materialize(params): SchemaArrays {
+    const name = (params.name as string | undefined) ?? 'EventDetect'
     const label = (params.label as string | undefined) ?? 'an event happens'
     const threshold = (params.threshold as number | undefined) ?? 0.65
     const hypothesis = (params.hypothesis as string | undefined) ?? 'The user is {}.'
     const inputTemplate = (params.inputTemplate as string | undefined) ?? '{{content}}'
+    const updates = (params.updates as { variable: string; setTo: string }[] | undefined) ?? []
+    const category = params.category as string | undefined
+    const responseHypothesis = params.responseHypothesis as string | undefined
+    const cls: any = {
+      name,
+      ...(inputTemplate ? { inputTemplate, inputHypothesis: hypothesis } : {}),
+      ...(responseHypothesis ? { responseTemplate: '{{content}}', responseHypothesis } : {}),
+      classifications: [{
+        label,
+        ...(category ? { category } : {}),
+        threshold,
+        updates,
+      }],
+    }
     return {
       variables: [],
-      classifiers: [{
-        name: 'EventDetect',
-        inputTemplate,
-        inputHypothesis: hypothesis,
-        classifications: [{ label, threshold, updates: [] }],
-      }],
+      classifiers: [cls],
       generators: [],
       contentRules: [],
       functions: [],

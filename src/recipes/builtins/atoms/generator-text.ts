@@ -14,20 +14,22 @@ const def: RecipeDef = {
   ],
   locals: { variables: [], classifiers: [], generators: ['TextGen'], functions: [] },
   source: { kind: 'builtin', materialize(params): SchemaArrays {
+    const name = (params.name as string | undefined) ?? 'TextGen'
     const phase = (params.phase as string | undefined) ?? 'On Response'
     const prompt = (params.prompt as string | undefined) ?? '"Describe what happens next in one sentence."'
     const minTokens = params.minTokens != null ? String(params.minTokens) : '5'
     const maxTokens = params.maxTokens != null ? String(params.maxTokens) : '40'
+    const condition = params.condition as string | undefined
+    const updates = params.updates as { variable: string; setTo: string }[] | undefined
+    const gen: any = { name, phase, prompt, minTokens, maxTokens }
+    if (condition) gen.condition = condition
+    if (updates && updates.length > 0) gen.updates = updates
+    if (params.type) gen.type = params.type as string
+    if (params.lazy !== undefined) gen.lazy = params.lazy as boolean
     return {
       variables: [],
       classifiers: [],
-      generators: [{
-        name: 'TextGen',
-        phase,
-        prompt,
-        minTokens,
-        maxTokens,
-      }],
+      generators: [gen],
       contentRules: [],
       functions: [],
     }

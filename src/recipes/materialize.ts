@@ -89,16 +89,19 @@ export function localsFromTemplate(template: SchemaArrays): Locals {
 
 // Collect all locals from a composed recipe by recursing into children.
 // Used for extras rewriting and stripPrefix bookkeeping.
-function collectComposedLocals(def: RecipeDef, _params: Record<string, unknown>, slugPrefix: string): Locals {
-  if (def.source.kind !== 'composed') return def.locals
+function collectComposedLocals(def: RecipeDef, params: Record<string, unknown>, slugPrefix: string): Locals {
+  if (def.source.kind !== 'composed') {
+    // For leaf atoms, derive locals from actual emitted output.
+    if (def.source.kind === 'builtin') return localsFromTemplate(def.source.materialize(params))
+    return localsFromTemplate(interpretTemplate(def.source.template, def.source.substitutions, params))
+  }
   const result: Locals = { variables: [], classifiers: [], generators: [], functions: [] }
   for (const ref of def.source.refs) {
     const childDef = getRecipe(ref.recipeId)
     if (!childDef) continue
     const childSlugPrefix = slugPrefix + '_' + ref.refId
-    const childLocals = childDef.source.kind === 'composed'
-      ? collectComposedLocals(childDef, {}, childSlugPrefix)
-      : childDef.locals
+    const childParams = resolveChildParams(ref, params, undefined)
+    const childLocals = collectComposedLocals(childDef, childParams, childSlugPrefix)
     for (const k of ['variables', 'classifiers', 'generators', 'functions'] as const) {
       for (const n of childLocals[k]) result[k].push(`${childSlugPrefix}_${n}`.slice(slugPrefix.length + 1))
     }
@@ -128,6 +131,26 @@ function materializeRecipe(
   ctx: MaterializeCtx,
 ): SchemaArrays {
   if (def.source.kind === 'composed') {
+    // Build a cross-child rename map so siblings can reference each other's elements.
+    // We need to know the actual emitted names per child, which requires materializing
+    // each child first (or using their locals). We do a lightweight pre-pass using locals.
+    const crossRefMap: RenameMap = { variables: {}, classifiers: {}, generators: {}, functions: {} }
+    for (const ref of def.source.refs) {
+      const childDef = getRecipe(ref.recipeId)
+      if (!childDef) continue
+      const childSlugPrefix = ctx.slugPrefix + '_' + ref.refId
+      const refIdPath = [...ctx.refIdPath, ref.refId]
+      const childOverrides = ctx.instance.childOverrides?.[refIdPath.join('.')]
+      const childParams = resolveChildParams(ref, params, childOverrides)
+      // Derive actual locals by materializing the child's bare output.
+      const childLocals = getActualLocals(childDef, childParams)
+      for (const k of ['variables', 'classifiers', 'generators', 'functions'] as const) {
+        for (const n of childLocals[k]) {
+          crossRefMap[k][n] = `${childSlugPrefix}_${n}`
+        }
+      }
+    }
+
     const acc = emptyArrays()
     for (const ref of def.source.refs) {
       const refIdPath = [...ctx.refIdPath, ref.refId]
@@ -143,7 +166,8 @@ function materializeRecipe(
       })
       mergeArrays(acc, childArrays)
     }
-    return acc
+    // Apply cross-child rewrite so sibling references in expression fields are resolved.
+    return rewriteRefs(acc, crossRefMap)
   }
 
   let bareArrays: SchemaArrays
@@ -153,10 +177,35 @@ function materializeRecipe(
     bareArrays = interpretTemplate(def.source.template, def.source.substitutions, params)
   }
 
-  const locals: Locals = def.locals ?? localsFromTemplate(bareArrays)
+  // Derive locals from actual emitted output so param-driven names are captured.
+  const locals: Locals = localsFromTemplate(bareArrays)
   const renameMap = buildRenameMap(locals, ctx.slugPrefix)
   const rewritten = rewriteRefs(bareArrays, renameMap)
   return applyRenameToNames(rewritten, renameMap)
+}
+
+// Derive the locals that a recipe will actually emit given resolved params.
+// For leaf atoms, materializes the bare output and reads names.
+// For composed recipes, recurses using an empty slug prefix (names only, not final prefixes).
+function getActualLocals(def: RecipeDef, params: Record<string, unknown>): Locals {
+  if (def.source.kind === 'composed') {
+    // For composed, collect all children's actual locals with their refId prefix.
+    const result: Locals = { variables: [], classifiers: [], generators: [], functions: [] }
+    for (const ref of def.source.refs) {
+      const childDef = getRecipe(ref.recipeId)
+      if (!childDef) continue
+      const childParams = resolveChildParams(ref, params, undefined)
+      const childLocals = getActualLocals(childDef, childParams)
+      for (const k of ['variables', 'classifiers', 'generators', 'functions'] as const) {
+        for (const n of childLocals[k]) result[k].push(`${ref.refId}_${n}`)
+      }
+    }
+    return result
+  }
+  if (def.source.kind === 'builtin') {
+    return localsFromTemplate(def.source.materialize(params))
+  }
+  return localsFromTemplate(interpretTemplate(def.source.template, def.source.substitutions, params))
 }
 
 export function materializeInstances(instances: RecipeInstance[], opts: MaterializeOptions = {}): SchemaArrays {
@@ -206,7 +255,7 @@ export function materializeInstances(instances: RecipeInstance[], opts: Material
     // Determine locals for stripPrefix bookkeeping.
     const locals: Locals = recipe.source.kind === 'composed'
       ? collectComposedLocals(recipe, inst.params, slug)
-      : (recipe.locals ?? localsFromTemplate(prefixed))
+      : localsFromTemplate(prefixed)
 
     // Build pinned map keyed by prefixed name.
     const pinnedMap = new Map<string, any>()

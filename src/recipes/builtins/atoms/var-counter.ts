@@ -12,9 +12,10 @@ const def: RecipeDef = {
   ],
   locals: { variables: ['counter'], classifiers: [], generators: [], functions: [] },
   source: { kind: 'builtin', materialize(params): SchemaArrays {
+    const name = (params.name as string | undefined) ?? 'counter'
     const initialValue = (params.initialValue as number | undefined) ?? 0
     const perTurnUpdate = (params.perTurnUpdate as string | undefined) ?? ''
-    const variable: any = { name: 'counter', initialValue: String(initialValue) }
+    const variable: any = { name, initialValue: String(initialValue) }
     if (perTurnUpdate) variable.perTurnUpdate = perTurnUpdate
     return { variables: [variable], classifiers: [], generators: [], contentRules: [], functions: [] }
   } },

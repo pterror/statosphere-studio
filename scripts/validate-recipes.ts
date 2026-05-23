@@ -10,6 +10,7 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import type { RecipeDef, SchemaArrays, ParamSpec, ComposedRef } from '../src/recipes/types'
 import { interpretTemplate, materializeInstances } from '../src/recipes/materialize'
+import { registerRecipe } from '../src/recipes/registry'
 
 const ROOT = join(import.meta.dir, '..')
 const SCHEMAS_DIR = join(ROOT, 'schemas')
@@ -39,6 +40,9 @@ function defaultParams(params: ParamSpec[]): Record<string, unknown> {
 const builtinsModule = await import('../src/recipes/builtins/index.ts')
 const builtins: RecipeDef[] = builtinsModule.default
 
+// Pre-register all builtins (atoms + bundles) so composed recipes can look up children.
+for (const def of builtins) registerRecipe(def)
+
 let allPassed = true
 
 for (const def of builtins) {
@@ -53,8 +57,19 @@ for (const def of builtins) {
   try {
     if (def.source.kind === 'builtin') {
       materialized = def.source.materialize(params)
-    } else {
+    } else if (def.source.kind === 'template') {
       materialized = interpretTemplate(def.source.template, def.source.substitutions, params)
+    } else {
+      // composed — use materializeInstances with a synthetic instance
+      const instance = {
+        id: 'validate-default',
+        recipeId: def.id,
+        name: def.name,
+        params,
+        pinned: [],
+        extras: { variables: [], classifiers: [], generators: [], contentRules: [], functions: [] },
+      }
+      materialized = materializeInstances([instance], { stripPrefix: true })
     }
   } catch (e) {
     console.error(`FAIL ${def.id}: materialize threw — ${(e as Error).message}`)
@@ -121,9 +136,7 @@ function collectUpdatesVariables(obj: any, acc: string[] = []): string[] {
   return acc
 }
 
-// Use registry to look up by id — materializeInstances needs the recipe registered.
-import { registerRecipe } from '../src/recipes/registry'
-for (const def of builtins) registerRecipe(def)
+// Builtins are already pre-registered above.
 
 for (const def of builtins) {
   if (def.id === 'custom') {
