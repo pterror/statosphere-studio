@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import type { RecipeInstance, RecipeDef, ElementType, SchemaArrays } from '../recipes/types'
 import { materializeInstances } from '../recipes/materialize'
 import { getRecipe, registerRecipe, unregisterRecipe } from '../recipes/registry'
+import { useSettingsStore } from './settings'
 
 const STORAGE_KEY = 'statosphere-studio-recipes-v2'
 const LIBRARY_KEY = 'statosphere-studio-custom-library-v2'
@@ -52,7 +53,10 @@ export const useRecipesStore = defineStore('recipes', () => {
     registerRecipe(def)
   }
 
-  const materialized = computed<SchemaArrays>(() => materializeInstances(instances.value))
+  const settingsStore = useSettingsStore()
+  const materialized = computed<SchemaArrays>(() =>
+    materializeInstances(instances.value, { stripPrefix: settingsStore.stripPrefixOnExport }),
+  )
 
   function persist() {
     saveToStorage(instances.value)

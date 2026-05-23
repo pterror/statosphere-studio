@@ -3,6 +3,7 @@ import { useDraftsStore } from '../stores/drafts'
 import { useRecipesStore } from '../stores/recipes'
 import { encodeConfig, decodeConfig } from './encode'
 import { decodeRecipe } from './recipe-encode'
+import { registerRecipe } from '../recipes/registry'
 
 export type HydrateResult =
   | { kind: 'none' }
@@ -31,7 +32,19 @@ export function hydrateFromLocation(): HydrateResult {
   if (cfgMatch) {
     try {
       const decoded = decodeConfig(cfgMatch[1])
-      configStore.replace(decoded)
+      if (decoded.sidecar) {
+        // v2.5 sidecar payload: restore custom library and instances
+        for (const def of decoded.sidecar.customLibrary) {
+          if (!recipesStore.customLibrary.find((d) => d.id === def.id)) {
+            registerRecipe(def)
+            recipesStore.customLibrary.push(def)
+          }
+        }
+        recipesStore.instances.splice(0, recipesStore.instances.length, ...decoded.sidecar.instances)
+      } else {
+        // Legacy plain-config payload: wrap into Custom recipe via replace()
+        configStore.replace(decoded.config)
+      }
       return { kind: 'config' }
     } catch {
     }
@@ -48,7 +61,11 @@ export function hydrateFromLocation(): HydrateResult {
 export function buildShareUrl(): string {
   if (typeof window === 'undefined') return ''
   const configStore = useConfigStore()
-  const encoded = encodeConfig(configStore.config)
+  const recipesStore = useRecipesStore()
+  const encoded = encodeConfig(configStore.config, {
+    instances: recipesStore.instances,
+    customLibrary: recipesStore.customLibrary,
+  })
   return `${window.location.origin}${window.location.pathname}#cfg=${encoded}`
 }
 

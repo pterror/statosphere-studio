@@ -15,6 +15,18 @@ function prefixElement(element: any, prefix: string, elementType: ElementType): 
   return clone
 }
 
+function stripPrefixFromElement(element: any, elementType: ElementType): any {
+  if (!element || typeof element !== 'object') return element
+  if (elementType === 'contentRules') return { ...element }
+  const clone = { ...element }
+  if ('name' in clone && typeof clone.name === 'string') {
+    // Strip "<prefix>." prefix if present
+    const dotIdx = clone.name.indexOf('.')
+    if (dotIdx !== -1) clone.name = clone.name.slice(dotIdx + 1)
+  }
+  return clone
+}
+
 function mergeArrays(a: SchemaArrays, b: SchemaArrays): SchemaArrays {
   return {
     variables: [...a.variables, ...b.variables],
@@ -63,13 +75,36 @@ export function interpretTemplate(
 
 const ELEMENT_TYPES: ElementType[] = ['variables', 'classifiers', 'generators', 'contentRules', 'functions']
 
-export function materializeInstances(instances: RecipeInstance[]): SchemaArrays {
+export interface MaterializeOptions {
+  /** When true, element names are emitted without the "<instanceName>." prefix.
+   *  If two recipes produce the same bare name, a numeric suffix (_2, _3, …) is appended. */
+  stripPrefix?: boolean
+}
+
+export function materializeInstances(instances: RecipeInstance[], opts: MaterializeOptions = {}): SchemaArrays {
   const result: SchemaArrays = {
     variables: [],
     classifiers: [],
     generators: [],
     contentRules: [],
     functions: [],
+  }
+
+  // Track seen bare names per element type for collision handling when stripPrefix is on.
+  const seenNames: Record<ElementType, Map<string, number>> = {
+    variables: new Map(),
+    classifiers: new Map(),
+    generators: new Map(),
+    contentRules: new Map(),
+    functions: new Map(),
+  }
+
+  function dedupName(et: ElementType, name: string): string {
+    if (!name || et === 'contentRules') return name
+    const seen = seenNames[et]
+    const count = (seen.get(name) ?? 0) + 1
+    seen.set(name, count)
+    return count === 1 ? name : `${name}_${count}`
   }
 
   for (const inst of instances) {
@@ -94,7 +129,16 @@ export function materializeInstances(instances: RecipeInstance[]): SchemaArrays 
       for (const el of materialized[et]) {
         const name = el?.name ?? ''
         const pinned = pinnedMap.get(`${et}:${name}`)
-        const resolved = pinned !== undefined ? pinned : prefixElement(el, prefix, et)
+        let resolved: any
+        if (pinned !== undefined) {
+          resolved = pinned
+        } else if (opts.stripPrefix) {
+          const stripped = stripPrefixFromElement(el, et)
+          if (stripped?.name) stripped.name = dedupName(et, stripped.name)
+          resolved = stripped
+        } else {
+          resolved = prefixElement(el, prefix, et)
+        }
         result[et].push(resolved)
       }
       for (const el of inst.extras[et]) {

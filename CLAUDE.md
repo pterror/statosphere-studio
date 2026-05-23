@@ -8,19 +8,25 @@ Statosphere stages are configured via five JSON arrays — variables, functions,
 
 Statosphere Studio is a best-in-class editor for that configuration surface. Four differentiators:
 
-1. **Built-in help** — every field has a help rail sourced from the upstream schema descriptions and extended guide prose. Users never need to leave the editor to understand a field.
-2. **Templates** — curated starter configurations for common stage patterns (emotion tracking, memory, image generation). One click to bootstrap a working stage.
-3. **Shareable saves** — the full configuration encodes to a URL-safe string (fflate + base64url) so a stage can be shared as a link with no backend.
-4. **fflate URL hotlinks** — the statosphere-guide site embeds StatosphereStudio as a Vue library component, with deep links that open the editor pre-loaded with the guide's example configurations.
+1. **Built-in help** — every field has inline descriptions sourced from the upstream schemas and the statosphere-guide.
+2. **Recipes** — composable, parameterized configuration patterns (HP Tracker, Inventory, etc.) that materialize into the five schema arrays. The canvas is a stream of recipe instances.
+3. **Shareable URLs** — the `#cfg=` hash encodes the full studio state (instances + custom library) via gzip + base64url so a stage configuration can be shared as a link with no backend.
+4. **Embeddable** — the statosphere-guide embeds `<StatosphereStudio embedded template="hp-tracker">` via the library build; the `template` prop maps to a builtin recipe id.
 
 Dual output: SPA deployed to GitHub Pages for standalone use; Vue library (`dist/statosphere-studio.es.js`) for embedding in statosphere-guide via global component registration.
 
-## Architecture
+## Architecture (v2)
 
-- `src/stores/config.ts` — pinia store: config tree, dirty flag, per-field validation errors
-- `src/components/StatosphereStudio.vue` — root component, exported from lib
-- `src/components/sections/` — one section component per element type
+- `src/recipes/types.ts` — RecipeDef / RecipeInstance model; ParamSpec, SchemaArrays
+- `src/recipes/builtins/` — 10 builtin recipes + custom freeform bucket
+- `src/recipes/materialize.ts` — `materializeInstances()`: applies params, pins, extras, prefixes; honors `stripPrefixOnExport`
+- `src/stores/recipes.ts` — Pinia store: instances + custom library, persisted to localStorage
+- `src/stores/config.ts` — derived store: computed projection of materialized instances; drives Ajv validation
+- `src/components/StreamCanvas.vue` — recipe-instance stream; RecipeBlock per instance
+- `src/share/encode.ts` — `#cfg=` hash codec; v2.5 wire format: `{ config, sidecar: { instances, customLibrary } }` (plain ConfigTree = legacy v1 import, wrapped as Custom recipe)
+- `src/share/hydrate.ts` — hash hydration on page load; restores sidecar or wraps legacy plain-config
 - `schemas/` — vendored upstream schemas; `upstream-commit.txt` tracks the pin
+- `scripts/validate-recipes.ts` — materializes each builtin with default params and Ajv-validates all sections
 
 ## Development
 

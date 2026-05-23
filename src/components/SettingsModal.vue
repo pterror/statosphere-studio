@@ -54,8 +54,11 @@
           </label>
           <label class="flex items-center gap-3 cursor-pointer text-sm text-gray-300 mt-2">
             <input type="checkbox" :checked="settings.stripPrefixOnExport" class="w-4 h-4 accent-indigo-500" @change="settings.stripPrefixOnExport = !settings.stripPrefixOnExport" />
-            Strip instance prefix on export (v2.5)
+            Strip instance prefix on export
           </label>
+          <p class="text-xs text-gray-500 mt-1 ml-7">
+            When on, element names are exported without the <code class="bg-gray-800 rounded px-1">instanceName.</code> prefix — cleaner Chub configs, but harder to debug when two recipes produce the same bare name (collisions get a numeric suffix).
+          </p>
         </section>
 
         <!-- Data -->

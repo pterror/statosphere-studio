@@ -59,6 +59,7 @@ import { fetchAndParse } from '../share/url-loader'
 import { useConfigStore } from '../stores/config'
 import { useRecipesStore } from '../stores/recipes'
 import { useSettingsStore } from '../stores/settings'
+import { registerRecipe } from '../recipes/registry'
 
 const open = defineModel<boolean>('open', { default: false })
 const configStore = useConfigStore()
@@ -125,7 +126,21 @@ function doImport() {
     }
     const cfgMatch = raw.match(/[#&]cfg=([^&\s]+)/)
     if (cfgMatch) {
-      parsed = decodeConfig(cfgMatch[1])
+      const decoded = decodeConfig(cfgMatch[1])
+      if (decoded.sidecar) {
+        const recipesStore = useRecipesStore()
+        for (const def of decoded.sidecar.customLibrary) {
+          if (!recipesStore.customLibrary.find((d) => d.id === def.id)) {
+            registerRecipe(def)
+            recipesStore.customLibrary.push(def)
+          }
+        }
+        recipesStore.instances.splice(0, recipesStore.instances.length, ...decoded.sidecar.instances)
+        open.value = false
+        input.value = ''
+        return
+      }
+      parsed = decoded.config
     } else {
       parsed = JSON.parse(raw)
     }

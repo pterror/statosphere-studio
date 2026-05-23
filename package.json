@@ -2,7 +2,7 @@
   "name": "@pterror/statosphere-studio",
   "version": "0.1.0",
   "type": "module",
-  "files": ["dist", "schemas", "templates", "help"],
+  "files": ["dist", "schemas", "help"],
   "main": "./dist/statosphere-studio.umd.cjs",
   "module": "./dist/statosphere-studio.es.js",
   "types": "./dist/statosphere-studio.d.ts",
@@ -21,7 +21,8 @@
     "build": "bun run build:spa && bun run build:lib",
     "lint": "vue-tsc --noEmit",
     "typecheck": "vue-tsc --noEmit",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "validate-recipes": "bun run scripts/validate-recipes.ts"
   },
   "peerDependencies": {
     "pinia": ">=2.0.0",

@@ -69,7 +69,8 @@ export async function fetchAndParse(
     const fragment = url.slice(hashIdx)
     const cfgMatch = fragment.match(/[#&]cfg=([^&]+)/)
     if (cfgMatch) {
-      return { kind: 'hash-config', data: decodeConfig(cfgMatch[1]) }
+      // decodeConfig returns { config, sidecar? }; for url-loader we surface only the config
+      return { kind: 'hash-config', data: decodeConfig(cfgMatch[1]).config }
     }
     const rcpMatch = fragment.match(/[#&]rcp=([^&]+)/)
     if (rcpMatch) {

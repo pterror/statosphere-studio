@@ -37,6 +37,7 @@ import { useConfigStore } from '../stores/config'
 import { useRecipesStore } from '../stores/recipes'
 import { useLintsStore } from '../stores/lints'
 import { useSettingsStore } from '../stores/settings'
+import { registerRecipe } from '../recipes/registry'
 
 const props = withDefaults(defineProps<{
   embedded?: boolean
@@ -64,7 +65,11 @@ function addInstanceNow() {
 const openInStudioUrl = computed(() => {
   if (typeof window === 'undefined') return props.spaUrl
   const configStore = useConfigStore()
-  const encoded = encodeConfig(configStore.config)
+  const recipesStore = useRecipesStore()
+  const encoded = encodeConfig(configStore.config, {
+    instances: recipesStore.instances,
+    customLibrary: recipesStore.customLibrary,
+  })
   return `${props.spaUrl}#cfg=${encoded}`
 })
 
@@ -96,22 +101,29 @@ onMounted(() => {
 
   if (props.share) {
     try {
-      configStore.replace(decodeConfig(props.share))
+      const decoded = decodeConfig(props.share)
+      if (decoded.sidecar) {
+        for (const def of decoded.sidecar.customLibrary) {
+          if (!recipesStore.customLibrary.find((d) => d.id === def.id)) {
+            registerRecipe(def)
+            recipesStore.customLibrary.push(def)
+          }
+        }
+        recipesStore.instances.splice(0, recipesStore.instances.length, ...decoded.sidecar.instances)
+      } else {
+        configStore.replace(decoded.config)
+      }
     } catch {
     }
   } else if (props.template) {
-    const builtinMatch = ['hp-tracker', 'mood-companion', 'stamina-tracker', 'background-swapper',
+    // template prop maps to a builtin recipe id; unknown ids are warned and ignored
+    const BUILTIN_IDS = ['hp-tracker', 'mood-companion', 'stamina-tracker', 'background-swapper',
       'npc-relationships', 'branching-scenario', 'inventory', 'mystery-game',
-      'persistent-memory', 'time-of-day'].includes(props.template)
-    if (builtinMatch) {
+      'persistent-memory', 'time-of-day']
+    if (BUILTIN_IDS.includes(props.template)) {
       recipesStore.addInstance(props.template)
     } else {
-      // Legacy: try to load from template JSON files
-      const templateFiles = import.meta.glob('../../templates/*.json', { eager: true }) as Record<string, { default: any }>
-      const key = `../../templates/${props.template}.json`
-      const mod = templateFiles[key]
-      const data = mod ? (mod.default ?? mod) : null
-      if (data) configStore.loadTemplate(data)
+      console.warn(`[StatosphereStudio] Unknown template id "${props.template}" — rendering empty studio. Pass a builtin recipe id.`)
     }
   } else {
     if (typeof window !== 'undefined') {
