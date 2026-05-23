@@ -48,6 +48,78 @@ function rewriteDependencies(deps: string, classMap: Record<string, string>, gen
   }).join(', ')
 }
 
+// Walk all expression-bearing fields in a single element and apply a visitor.
+// visitor receives (value: string) and returns the replacement.
+function visitElementStrings(el: any, visitor: (s: string) => string): any {
+  if (!el || typeof el !== 'object') return el
+  const c = { ...el }
+  // Variable expression fields
+  for (const field of ['initialValue', 'perTurnUpdate', 'postInputUpdate', 'preResponseUpdate', 'postResponseUpdate', 'body', 'condition', 'modification', 'prompt', 'inputTemplate', 'inputHypothesis'] as const) {
+    if (typeof c[field] === 'string') c[field] = visitor(c[field])
+  }
+  // dependencies string
+  if (typeof c.dependencies === 'string') {
+    c.dependencies = c.dependencies.split(',').map((p: string) => visitor(p.trim())).join(', ')
+  }
+  // updates[].variable + updates[].setTo
+  if (Array.isArray(c.updates)) {
+    c.updates = c.updates.map((u: any) => {
+      if (!u || typeof u !== 'object') return u
+      const cu = { ...u }
+      if (typeof cu.variable === 'string') cu.variable = visitor(cu.variable)
+      if (typeof cu.setTo === 'string') cu.setTo = visitor(cu.setTo)
+      return cu
+    })
+  }
+  // classifications[].condition + classifications[].updates
+  if (Array.isArray(c.classifications)) {
+    c.classifications = c.classifications.map((cls: any) => {
+      if (!cls || typeof cls !== 'object') return cls
+      const cc = { ...cls }
+      if (typeof cc.condition === 'string') cc.condition = visitor(cc.condition)
+      if (Array.isArray(cc.updates)) {
+        cc.updates = cc.updates.map((u: any) => {
+          if (!u || typeof u !== 'object') return u
+          const cu = { ...u }
+          if (typeof cu.variable === 'string') cu.variable = visitor(cu.variable)
+          if (typeof cu.setTo === 'string') cu.setTo = visitor(cu.setTo)
+          return cu
+        })
+      }
+      return cc
+    })
+  }
+  return c
+}
+
+// Visit all expression-bearing strings across an entire SchemaArrays, applying
+// the visitor to each string.  Returns a new SchemaArrays.
+function visitArraysStrings(arrays: SchemaArrays, visitor: (s: string) => string): SchemaArrays {
+  return {
+    variables: arrays.variables.map(el => visitElementStrings(el, visitor)),
+    classifiers: arrays.classifiers.map(el => visitElementStrings(el, visitor)),
+    generators: arrays.generators.map(el => visitElementStrings(el, visitor)),
+    contentRules: arrays.contentRules.map(el => visitElementStrings(el, visitor)),
+    functions: arrays.functions.map(el => visitElementStrings(el, visitor)),
+  }
+}
+
+// Rewrite identifiers in all expression-bearing fields using a flat from→to map.
+// Identifiers are matched at word boundaries; no kind-awareness.
+export function rewriteIdentifiers(arrays: SchemaArrays, fromTo: Record<string, string>): SchemaArrays {
+  const entries = Object.entries(fromTo)
+  if (entries.length === 0) return arrays
+  // Build a single regex matching all source identifiers at word boundaries.
+  const sorted = [...entries].sort((a, b) => b[0].length - a[0].length)
+  const alts = sorted.map(([k]) => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  const re = new RegExp(`\\b(${alts.join('|')})\\b`, 'g')
+  const visitor = (s: string): string => {
+    re.lastIndex = 0
+    return s.replace(re, (_, id) => fromTo[id] ?? id)
+  }
+  return visitArraysStrings(arrays, visitor)
+}
+
 export function rewriteRefs(arrays: SchemaArrays, renameMap: RenameMap): SchemaArrays {
   const result: SchemaArrays = structuredClone(arrays)
 

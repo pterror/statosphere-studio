@@ -5,8 +5,26 @@ import { getRecipe } from './registry'
 import { resolveChildParams } from './compose'
 
 // Lowercase, replace non-alphanumeric runs with _, trim leading/trailing _.
-function slugify(s: string): string {
+export function slugify(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
+}
+
+// Compute the slug and locals for a single instance.
+// Slug uniqueness is NOT guaranteed here (no global de-dup); use only for
+// single-instance look-ups such as the move-element rebind pass.
+export function instanceLocals(inst: RecipeInstance): { slug: string; locals: Locals } {
+  const recipe = getRecipe(inst.recipeId)
+  const slugBase = slugify(inst.name) || slugify(inst.recipeId) || 'instance'
+  const slug = slugBase // single-instance view — no count suffix
+  if (!recipe) return { slug, locals: { variables: [], classifiers: [], generators: [], functions: [] } }
+  const locals: Locals = recipe.source.kind === 'composed'
+    ? collectComposedLocals(recipe, inst.params, slug)
+    : localsFromTemplate(
+        recipe.source.kind === 'builtin'
+          ? recipe.source.materialize(inst.params)
+          : interpretTemplate(recipe.source.template, recipe.source.substitutions, inst.params),
+      )
+  return { slug, locals }
 }
 
 function buildRenameMap(locals: Locals, slug: string): RenameMap {

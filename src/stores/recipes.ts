@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import type { RecipeInstance, RecipeDef, ElementType, SchemaArrays } from '../recipes/types'
-import { materializeInstances, localsFromTemplate } from '../recipes/materialize'
+import { materializeInstances, localsFromTemplate, instanceLocals } from '../recipes/materialize'
+import { rewriteIdentifiers } from '../recipes/rewrite-refs'
 import { getRecipe, registerRecipe, unregisterRecipe } from '../recipes/registry'
 import { useSettingsStore } from './settings'
 import { useUndoStore } from './undo'
@@ -177,11 +178,11 @@ export const useRecipesStore = defineStore('recipes', () => {
     targetInstanceId: string,
     elementType: ElementType,
     elementName: string,
-  ): void {
-    if (sourceInstanceId === targetInstanceId) return
+  ): { rebound: number; dangling: number } {
+    if (sourceInstanceId === targetInstanceId) return { rebound: 0, dangling: 0 }
     const srcInst = instances.value.find((i) => i.id === sourceInstanceId)
     const tgtInst = instances.value.find((i) => i.id === targetInstanceId)
-    if (!srcInst || !tgtInst) return
+    if (!srcInst || !tgtInst) return { rebound: 0, dangling: 0 }
     const before = snapshotInstances()
 
     // Determine if element is pinned or in extras
@@ -203,19 +204,59 @@ export const useRecipesStore = defineStore('recipes', () => {
       } else {
         // Materialized-from-recipe but not pinned — pin first, then move
         const recipe = getRecipe(srcInst.recipeId)
-        if (!recipe) return
+        if (!recipe) return { rebound: 0, dangling: 0 }
         const mat =
           recipe.source.kind === 'builtin'
             ? recipe.source.materialize(srcInst.params)
             : materializeInstances([srcInst])
         const el = mat[elementType].find((e: any) => e?.name === elementName)
-        if (!el) return
+        if (!el) return { rebound: 0, dangling: 0 }
         elementData = JSON.parse(JSON.stringify(el))
       }
     }
 
-    if (elementData === null) return
-    tgtInst.extras[elementType].push(elementData)
+    if (elementData === null) return { rebound: 0, dangling: 0 }
+
+    // ── Smart-rebind pass ────────────────────────────────────────────────────
+    const { slug: srcSlug, locals: srcLocals } = instanceLocals(srcInst)
+    const { slug: tgtSlug, locals: tgtLocals } = instanceLocals(tgtInst)
+
+    // Build fromTo map: srcSlug_name → tgtSlug_name for names present on both sides.
+    const fromTo: Record<string, string> = {}
+    for (const kind of ['variables', 'classifiers', 'generators', 'functions'] as const) {
+      const tgtSet = new Set(tgtLocals[kind])
+      for (const name of srcLocals[kind]) {
+        if (tgtSet.has(name)) {
+          fromTo[`${srcSlug}_${name}`] = `${tgtSlug}_${name}`
+        }
+      }
+    }
+
+    // Wrap the single element in a minimal SchemaArrays, rewrite, then unwrap.
+    const singleArrays = {
+      variables: [] as any[],
+      classifiers: [] as any[],
+      generators: [] as any[],
+      contentRules: [] as any[],
+      functions: [] as any[],
+    }
+    singleArrays[elementType] = [elementData]
+    const rewritten = rewriteIdentifiers(singleArrays, fromTo)
+    const rewrittenElement = structuredClone(rewritten[elementType][0])
+
+    const rebound = Object.keys(fromTo).length
+    // Count remaining source-prefixed refs after rewrite.
+    const escapedSrc = srcSlug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const danglingRe = new RegExp(`\\b${escapedSrc}_\\w+\\b`, 'g')
+    function countDangling(obj: any): number {
+      if (typeof obj === 'string') return (obj.match(danglingRe) ?? []).length
+      if (Array.isArray(obj)) return obj.reduce((acc, v) => acc + countDangling(v), 0)
+      if (obj && typeof obj === 'object') return Object.values(obj).reduce((acc: number, v) => acc + countDangling(v), 0)
+      return 0
+    }
+    const dangling = countDangling(rewrittenElement)
+
+    tgtInst.extras[elementType].push(rewrittenElement)
     persist()
     const after = snapshotInstances()
     useUndoStore().push({
@@ -223,6 +264,21 @@ export const useRecipesStore = defineStore('recipes', () => {
       do: () => { restoreInstances(after) },
       undo: () => { restoreInstances(before) },
     })
+
+    // ── Toast ────────────────────────────────────────────────────────────────
+    let msg = `Moved "${elementName}"`
+    if (rebound > 0 && dangling === 0) {
+      msg += ` · rebound ${rebound} ref(s) to ${tgtInst.name}`
+    } else if (rebound === 0 && dangling > 0) {
+      msg += ` · ${dangling} ref(s) still point at "${srcInst.name}"`
+    } else if (rebound > 0 && dangling > 0) {
+      msg += ` · rebound ${rebound} ref(s) to ${tgtInst.name} · ${dangling} ref(s) still point at "${srcInst.name}"`
+    } else {
+      msg += ` → ${tgtInst.name}`
+    }
+    useToastStore().show(msg, { durationMs: 5000 })
+
+    return { rebound, dangling }
   }
 
   function removeInstance(id: string): void {

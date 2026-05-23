@@ -8,8 +8,9 @@ import Ajv from 'ajv'
 import addFormats from 'ajv-formats'
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import type { RecipeDef, SchemaArrays, ParamSpec, ComposedRef } from '../src/recipes/types'
-import { interpretTemplate, materializeInstances } from '../src/recipes/materialize'
+import type { RecipeDef, SchemaArrays, ParamSpec, ComposedRef, RecipeInstance } from '../src/recipes/types'
+import { interpretTemplate, materializeInstances, instanceLocals } from '../src/recipes/materialize'
+import { rewriteIdentifiers } from '../src/recipes/rewrite-refs'
 import { registerRecipe } from '../src/recipes/registry'
 
 const ROOT = join(import.meta.dir, '..')
@@ -344,6 +345,121 @@ try {
 } catch (e) {
   console.error(`FAIL synthetic composed: threw — ${(e as Error).message}`)
   allPassed = false
+}
+
+// ── Smart-rebind move test ───────────────────────────────────────────────────
+console.log('\nSmart-rebind move test:')
+
+{
+  // Two HP-Tracker-like instances with distinct slugs.
+  // Instance A: name "HP Tracker A"  → slug "hp_tracker_a"
+  // Instance B: name "HP Tracker B"  → slug "hp_tracker_b"
+  const hpTrackerDef = builtins.find(d => d.id === 'hp-tracker')!
+  const hpParams = defaultParams(hpTrackerDef.params)
+
+  const instA: RecipeInstance = {
+    id: 'move-test-a',
+    recipeId: 'hp-tracker',
+    name: 'HP Tracker A',
+    params: hpParams,
+    pinned: [],
+    extras: { variables: [], classifiers: [], generators: [], contentRules: [], functions: [] },
+  }
+  const instB: RecipeInstance = {
+    id: 'move-test-b',
+    recipeId: 'hp-tracker',
+    name: 'HP Tracker B',
+    params: hpParams,
+    pinned: [],
+    extras: { variables: [], classifiers: [], generators: [], contentRules: [], functions: [] },
+  }
+
+  const { slug: slugA, locals: localsA } = instanceLocals(instA)
+  const { slug: slugB, locals: localsB } = instanceLocals(instB)
+
+  // "hp" local is shared by both (hp_var_hp on HP Tracker). Find the actual bare name.
+  // From materialize: composed locals for hp-tracker via collectComposedLocals use
+  // slugPrefix = slug, childSlugPrefix = slug + '_' + refId.
+  // localsA.variables will contain names like "hp_var_hp", "hp_var_max_hp", etc.
+  // We want the first variable local that also exists in localsB — that's the rebindable one.
+  const sharedVarName = localsA.variables.find(n => localsB.variables.includes(n))!
+
+  // Craft an extra variable that references:
+  //   - <slugA>_<sharedVarName>  → rebindable (exists in B)
+  //   - <slugA>_only_local       → dangling (no target-side equivalent)
+  const extraVar: any = {
+    name: 'custom_extra',
+    initialValue: `${slugA}_${sharedVarName} + 1`,
+    perTurnUpdate: `${slugA}_${sharedVarName} * 2 + ${slugA}_only_local`,
+  }
+
+  // Replicate the rebind logic from moveElement.
+  const fromTo: Record<string, string> = {}
+  for (const kind of ['variables', 'classifiers', 'generators', 'functions'] as const) {
+    const tgtSet = new Set(localsB[kind])
+    for (const name of localsA[kind]) {
+      if (tgtSet.has(name)) {
+        fromTo[`${slugA}_${name}`] = `${slugB}_${name}`
+      }
+    }
+  }
+
+  const singleArrays: SchemaArrays = {
+    variables: [structuredClone(extraVar)],
+    classifiers: [], generators: [], contentRules: [], functions: [],
+  }
+  const rewritten = rewriteIdentifiers(singleArrays, fromTo)
+  const rewrittenEl = rewritten.variables[0]
+
+  // Count remaining source-prefixed refs.
+  const escapedSrc = slugA.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const danglingRe = new RegExp(`\\b${escapedSrc}_\\w+\\b`, 'g')
+  function countDangling(obj: any): number {
+    if (typeof obj === 'string') return (obj.match(danglingRe) ?? []).length
+    if (Array.isArray(obj)) return obj.reduce((acc: number, v) => acc + countDangling(v), 0)
+    if (obj && typeof obj === 'object') return Object.values(obj).reduce((acc: number, v) => acc + countDangling(v as any), 0)
+    return 0
+  }
+  const dangling = countDangling(rewrittenEl)
+  const rebound = Object.keys(fromTo).filter(k => {
+    // Count only the fromTo entries that actually appeared in the original element.
+    const escapedK = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const testRe = new RegExp(`\\b${escapedK}\\b`)
+    return testRe.test(extraVar.initialValue ?? '') || testRe.test(extraVar.perTurnUpdate ?? '')
+  }).length
+
+  const moveErrors: string[] = []
+
+  // The rewritten element should NOT contain the source slug for the shared var.
+  const sharedSrcRef = `${slugA}_${sharedVarName}`
+  const sharedTgtRef = `${slugB}_${sharedVarName}`
+  if ((rewrittenEl.initialValue as string).includes(sharedSrcRef)) {
+    moveErrors.push(`  shared ref "${sharedSrcRef}" was NOT rebound in initialValue: ${rewrittenEl.initialValue}`)
+  }
+  if (!(rewrittenEl.initialValue as string).includes(sharedTgtRef)) {
+    moveErrors.push(`  expected target ref "${sharedTgtRef}" in initialValue: ${rewrittenEl.initialValue}`)
+  }
+
+  // The dangling ref should still be present.
+  const danglingRef = `${slugA}_only_local`
+  if (!(rewrittenEl.perTurnUpdate as string).includes(danglingRef)) {
+    moveErrors.push(`  dangling ref "${danglingRef}" should remain in perTurnUpdate: ${rewrittenEl.perTurnUpdate}`)
+  }
+
+  if (rebound !== 1) {
+    moveErrors.push(`  expected rebound=1, got ${rebound}`)
+  }
+  if (dangling !== 1) {
+    moveErrors.push(`  expected dangling=1, got ${dangling}`)
+  }
+
+  if (moveErrors.length > 0) {
+    console.error(`FAIL smart-rebind move`)
+    for (const e of moveErrors) console.error(e)
+    allPassed = false
+  } else {
+    console.log(`ok   smart-rebind move (rebound=${rebound} dangling=${dangling} slugA=${slugA} slugB=${slugB})`)
+  }
 }
 
 if (!allPassed) process.exit(1)
