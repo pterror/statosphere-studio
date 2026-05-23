@@ -30,7 +30,25 @@
         class="prose prose-invert prose-sm max-w-none text-gray-300 help-content"
         v-html="rendered"
       />
-      <p v-else class="text-xs text-gray-600">Click any field to see help.</p>
+      <template v-else>
+        <p class="text-xs text-gray-600">Click any field to see help.</p>
+        <template v-if="lintsStore.results.length">
+          <div class="mt-2 border-t border-gray-800 pt-2">
+            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Lints ({{ lintsStore.results.length }})</span>
+          </div>
+          <div class="flex flex-col gap-2 mt-1">
+            <button
+              v-for="(lint, i) in lintsStore.results"
+              :key="i"
+              class="flex items-start gap-1.5 text-left rounded hover:bg-gray-800 px-1.5 py-1 transition-colors"
+              @click="jumpToLint(lint)"
+            >
+              <span class="shrink-0 mt-1 w-1.5 h-1.5 rounded-full bg-yellow-400" />
+              <span class="text-xs text-yellow-200 leading-snug">{{ lint.message }}</span>
+            </button>
+          </div>
+        </template>
+      </template>
     </div>
   </aside>
 </template>
@@ -39,9 +57,14 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { marked } from 'marked'
 import { useFocusStore } from '../stores/focus'
+import { useLintsStore } from '../stores/lints'
+import { useUiStore } from '../stores/ui'
 import { getHelp } from '../help/loader'
+import type { LintResult } from '../stores/lints'
 
 const focusStore = useFocusStore()
+const lintsStore = useLintsStore()
+const uiStore = useUiStore()
 const collapsed = ref(false)
 
 const raw = computed(() => {
@@ -54,6 +77,10 @@ const rendered = computed(() => {
   if (!raw.value) return null
   return marked.parse(raw.value) as string
 })
+
+function jumpToLint(lint: LintResult) {
+  uiStore.activeTab = lint.section
+}
 
 function handleResize() {
   if (window.innerWidth < 900) {

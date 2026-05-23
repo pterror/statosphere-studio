@@ -4,11 +4,13 @@
       label="Content Rules"
       :items="store.config.contentRules.map((r) => r.category || '(rule)')"
       :selected="selected"
+      :lint-counts="lintCounts"
       @add="add"
       @select="selected = $event"
     />
     <div class="flex-1 min-w-0 overflow-y-auto p-4" v-if="item">
       <div class="flex flex-col gap-3 max-w-2xl">
+        <LintWarnings :lints="selectedLints" @apply-fix="store.replace($event)" />
         <FieldRow label="Category" section="contentRules" field="category">
           <EnumChoice
             v-model="item.category"
@@ -38,14 +40,33 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useConfigStore, type ContentRule } from '../../stores/config'
+import { useLintsStore } from '../../stores/lints'
 import ElementList from '../ElementList.vue'
 import HelpRail from '../HelpRail.vue'
+import LintWarnings from '../LintWarnings.vue'
 import FieldRow from './FieldRow.vue'
 import ExpressionField from '../widgets/ExpressionField.vue'
 import EnumChoice from '../widgets/EnumChoice.vue'
 
 const store = useConfigStore()
+const lintsStore = useLintsStore()
 const selected = ref<number | null>(null)
+
+const lintCounts = computed(() => {
+  const counts: Record<number, number> = {}
+  for (const r of lintsStore.results) {
+    if (r.section === 'contentRules') {
+      counts[r.elementIndex] = (counts[r.elementIndex] ?? 0) + 1
+    }
+  }
+  return counts
+})
+
+const selectedLints = computed(() =>
+  selected.value !== null
+    ? lintsStore.results.filter((r) => r.section === 'contentRules' && r.elementIndex === selected.value)
+    : []
+)
 
 const categoryOptions = [
   { value: 'Input', label: 'Input', description: 'Rewrites the user message before the bot sees it.' },

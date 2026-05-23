@@ -11,13 +11,18 @@
       <li
         v-for="(item, i) in items"
         :key="i"
-        class="px-3 py-2 cursor-pointer text-sm truncate transition-colors"
+        class="px-3 py-2 cursor-pointer text-sm truncate transition-colors flex items-center gap-1.5"
         :class="selected === i
           ? 'bg-indigo-900 text-indigo-200'
           : 'text-gray-300 hover:bg-gray-800'"
         @click="$emit('select', i)"
       >
-        {{ item || `(unnamed ${i + 1})` }}
+        <span class="flex-1 truncate">{{ item || `(unnamed ${i + 1})` }}</span>
+        <span
+          v-if="lintCounts && lintCounts[i]"
+          class="shrink-0 w-2 h-2 rounded-full bg-yellow-400"
+          :title="`${lintCounts[i]} lint${lintCounts[i] === 1 ? '' : 's'}`"
+        />
       </li>
       <li v-if="items.length === 0" class="px-3 py-4 text-xs text-gray-600 text-center">
         No {{ label.toLowerCase() }} yet
@@ -31,6 +36,7 @@ defineProps<{
   label: string
   items: string[]
   selected: number | null
+  lintCounts?: Record<number, number>
 }>()
 
 defineEmits<{

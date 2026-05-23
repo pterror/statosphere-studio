@@ -4,11 +4,13 @@
       label="Variables"
       :items="store.config.variables.map((v) => v.name)"
       :selected="selected"
+      :lint-counts="lintCounts"
       @add="add"
       @select="selected = $event"
     />
     <div class="flex-1 min-w-0 overflow-y-auto p-4" v-if="item">
       <div class="flex flex-col gap-3 max-w-2xl">
+        <LintWarnings :lints="selectedLints" @apply-fix="store.replace($event)" />
         <FieldRow label="Name" section="variables" field="name">
           <input v-model="item.name" class="field-input" @input="store.markDirty()" />
         </FieldRow>
@@ -43,13 +45,32 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useConfigStore, type Variable } from '../../stores/config'
+import { useLintsStore } from '../../stores/lints'
 import ElementList from '../ElementList.vue'
 import HelpRail from '../HelpRail.vue'
 import FieldRow from './FieldRow.vue'
 import ExpressionField from '../widgets/ExpressionField.vue'
+import LintWarnings from '../LintWarnings.vue'
 
 const store = useConfigStore()
+const lintsStore = useLintsStore()
 const selected = ref<number | null>(null)
+
+const lintCounts = computed(() => {
+  const counts: Record<number, number> = {}
+  for (const r of lintsStore.results) {
+    if (r.section === 'variables') {
+      counts[r.elementIndex] = (counts[r.elementIndex] ?? 0) + 1
+    }
+  }
+  return counts
+})
+
+const selectedLints = computed(() =>
+  selected.value !== null
+    ? lintsStore.results.filter((r) => r.section === 'variables' && r.elementIndex === selected.value)
+    : []
+)
 
 const item = computed<Variable | null>(() =>
   selected.value !== null ? store.config.variables[selected.value] ?? null : null
