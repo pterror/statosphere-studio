@@ -1,6 +1,6 @@
 <template>
   <div
-    class="flex flex-col bg-gray-950 text-gray-100 font-sans"
+    class="flex flex-col text-gray-100 font-sans"
     :class="embedded ? 'h-[600px] relative' : 'h-screen'"
   >
     <TopBar v-if="!embedded" @toggle-browse="onToggleBrowse" @open-library-modal="libraryModalOpen = true" />
@@ -21,8 +21,8 @@
     <!-- cmd-K modal -->
     <Teleport to="body">
       <div v-if="libraryModalOpen" class="fixed inset-0 z-50 flex items-start justify-center pt-[12vh]" @mousedown.self="libraryModalOpen = false">
-        <div class="fixed inset-0 bg-black/60" @mousedown="libraryModalOpen = false" />
-        <div class="relative z-10 bg-gray-900 border border-gray-700 rounded-xl w-[620px] max-w-[90vw] shadow-2xl flex flex-col overflow-hidden">
+        <div class="fixed inset-0" style="background: rgba(0,0,0,0.35); backdrop-filter: blur(4px)" @mousedown="libraryModalOpen = false" />
+        <div class="relative z-10 glass-panel w-[620px] max-w-[90vw] flex flex-col overflow-hidden">
           <RecipeLibrary display="modal" @add="onModalAdd" @close="libraryModalOpen = false" />
         </div>
       </div>
@@ -114,7 +114,7 @@ function applyTheme(t: 'light' | 'dark' | 'auto') {
   if (dark) {
     document.documentElement.setAttribute('data-theme', 'dark')
   } else {
-    document.documentElement.removeAttribute('data-theme')
+    document.documentElement.setAttribute('data-theme', 'light')
   }
 }
 

@@ -1,5 +1,5 @@
 <template>
-  <header class="flex items-center gap-2 px-4 py-2 bg-gray-900 border-b border-gray-800 shrink-0">
+  <header class="glass-bar flex items-center gap-2 px-4 py-2 shrink-0">
     <span class="font-semibold text-indigo-400 mr-auto">Statosphere Studio</span>
     <button class="btn-action" @click="emit('toggle-browse')">Browse ▾</button>
     <button
@@ -27,7 +27,7 @@
         <button class="btn-action">⋯</button>
       </DropdownMenuTrigger>
       <DropdownMenuPortal>
-        <DropdownMenuContent class="bg-gray-900 border border-gray-700 rounded shadow-xl z-50 py-1 min-w-[180px]" :side-offset="4">
+        <DropdownMenuContent class="glass-panel z-50 py-1 min-w-[180px]" style="border-radius: 10px" :side-offset="4">
           <DropdownMenuItem class="menu-item" @click="importOpen = true">Import</DropdownMenuItem>
           <DropdownMenuItem class="menu-item" @click="copyJson">Copy JSON</DropdownMenuItem>
           <DropdownMenuItem class="menu-item" @click="downloadJson">Download .json</DropdownMenuItem>
@@ -158,9 +158,21 @@ onUnmounted(() => window.removeEventListener('keydown', onGlobalKeydown))
 
 <style scoped>
 .btn-action {
-  @apply px-3 py-1 rounded text-sm bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-gray-100 transition-colors;
+  @apply px-3 py-1 rounded text-sm transition-colors;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+}
+.btn-action:hover {
+  background: var(--glass-bg-hover);
+  color: var(--text-primary);
 }
 .menu-item {
-  @apply px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-gray-100 cursor-pointer outline-none block w-full text-left;
+  @apply px-4 py-2 text-sm cursor-pointer outline-none block w-full text-left;
+  color: var(--text-secondary);
+}
+.menu-item:hover {
+  background: var(--glass-bg-hover);
+  color: var(--text-primary);
 }
 </style>

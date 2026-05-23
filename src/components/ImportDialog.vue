@@ -1,8 +1,8 @@
 <template>
   <DialogRoot v-model:open="open">
     <DialogPortal>
-      <DialogOverlay class="fixed inset-0 bg-black/60 z-40" />
-      <DialogContent class="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-gray-900 border border-gray-700 rounded-lg p-6 w-[560px] max-w-[90vw] shadow-xl">
+      <DialogOverlay class="fixed inset-0 z-40" style="background: rgba(0,0,0,0.35); backdrop-filter: blur(4px)" />
+      <DialogContent class="glass-panel fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 p-6 w-[560px] max-w-[90vw]">
         <DialogTitle class="text-gray-100 font-semibold mb-4">Import</DialogTitle>
 
         <!-- URL import -->
@@ -10,7 +10,7 @@
         <div class="flex gap-2 mb-1">
           <input
             v-model="urlInput"
-            class="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-200 font-mono focus:outline-none focus:border-indigo-500"
+            class="glass-input flex-1 rounded px-3 py-1.5 text-sm font-mono"
             placeholder="https://gist.github.com/user/abc123"
           />
           <button class="btn-action" :disabled="urlLoading" @click="doUrlImport">
@@ -24,13 +24,13 @@
         <p v-if="urlError" class="text-xs text-red-400 mb-2">{{ urlError }}</p>
         <p v-if="urlSuccess" class="text-xs text-green-400 mb-2">{{ urlSuccess }}</p>
 
-        <div class="border-t border-gray-800 my-4" />
+        <div class="my-4" style="border-top: 1px solid var(--glass-border)" />
 
         <!-- JSON paste -->
         <p class="text-xs text-gray-400 mb-2">Paste a share URL or raw JSON.</p>
         <textarea
           v-model="input"
-          class="w-full h-40 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-gray-200 font-mono resize-none focus:outline-none focus:border-indigo-500"
+          class="glass-input w-full h-40 rounded px-3 py-2 text-sm font-mono resize-none"
           placeholder="https://...#cfg=... or { &quot;variables&quot;: [] ... }"
         />
         <p v-if="error" class="text-xs text-red-400 mt-1">{{ error }}</p>
@@ -156,9 +156,24 @@ function doImport() {
 
 <style scoped>
 .btn-action {
-  @apply px-3 py-1.5 rounded text-sm bg-indigo-600 text-white hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply px-3 py-1.5 rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+}
+.btn-action:hover:not(:disabled) {
+  background: var(--glass-bg-hover);
 }
 .btn-cancel {
-  @apply px-3 py-1.5 rounded text-sm bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors;
+  @apply px-3 py-1.5 rounded text-sm;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-top-color: var(--glass-border-light);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 120ms ease-out;
+}
+.btn-cancel:hover {
+  background: var(--glass-bg-hover);
 }
 </style>

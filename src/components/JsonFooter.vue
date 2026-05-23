@@ -1,8 +1,9 @@
 <template>
-  <div class="border-t border-gray-800 bg-gray-950 shrink-0" :class="fullscreen ? 'fixed inset-0 z-50 flex flex-col' : ''">
+  <div class="shrink-0" :class="fullscreen ? 'fixed inset-0 z-50 flex flex-col glass-panel' : 'glass-bar'">
     <!-- Collapsed preview bar -->
     <div
-      class="flex items-center gap-2 px-3 py-1 bg-gray-900 cursor-pointer select-none"
+      class="flex items-center gap-2 px-3 py-1 cursor-pointer select-none"
+      style="background: var(--glass-bg)"
       @click="!fullscreen && (open = !open)"
     >
       <span class="text-xs text-gray-400">
@@ -20,7 +21,8 @@
     </div>
     <div v-if="open || fullscreen" class="flex flex-col flex-1 min-h-0">
       <textarea
-        class="flex-1 w-full bg-gray-950 text-green-300 font-mono text-xs p-3 resize-none outline-none min-h-48"
+        class="flex-1 w-full font-mono text-xs p-3 resize-none outline-none min-h-48"
+        style="background: rgba(0,0,0,0.25); color: #7bf5a0"
         :value="draft"
         spellcheck="false"
         @input="onInput"

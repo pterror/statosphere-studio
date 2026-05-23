@@ -1,9 +1,9 @@
 <template>
   <DialogRoot v-model:open="open">
     <DialogPortal>
-      <DialogOverlay class="fixed inset-0 bg-black/60 z-40" />
-      <DialogContent class="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-gray-900 border border-gray-700 rounded-lg shadow-xl flex flex-col" style="width: min(92vw, 900px); height: min(85vh, 640px);">
-        <div class="flex items-center px-4 py-2 border-b border-gray-800 shrink-0">
+      <DialogOverlay class="fixed inset-0 z-40" style="background: rgba(0,0,0,0.35); backdrop-filter: blur(4px)" />
+      <DialogContent class="glass-panel fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 flex flex-col" style="width: min(92vw, 900px); height: min(85vh, 640px);">
+        <div class="flex items-center px-4 py-2 shrink-0" style="border-bottom: 1px solid var(--glass-border)">
           <DialogTitle class="text-gray-100 font-semibold text-sm">Dataflow Graph</DialogTitle>
           <DialogClose class="ml-auto text-gray-400 hover:text-gray-200 text-lg leading-none">&times;</DialogClose>
         </div>

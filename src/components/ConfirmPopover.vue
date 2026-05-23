@@ -131,15 +131,22 @@ function cancel() {
 
 <style scoped>
 .confirm-popover {
-  @apply bg-gray-900 border border-gray-700 rounded-lg p-3 shadow-xl;
+  @apply rounded-lg p-3;
+  background: var(--glass-bg-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-top-color: var(--glass-border-light);
+  box-shadow: var(--glass-shadow);
 }
 
 .confirm-popover.is-danger {
-  @apply border-red-700;
+  border-color: rgba(185, 28, 28, 0.5);
 }
 
 .prompt {
-  @apply text-xs text-gray-300 mb-3 leading-relaxed;
+  @apply text-xs mb-3 leading-relaxed;
+  color: var(--text-secondary);
 }
 
 .actions {
@@ -147,19 +154,42 @@ function cancel() {
 }
 
 .btn-cancel {
-  @apply px-2.5 py-1 rounded text-xs bg-gray-800 text-gray-400 hover:bg-gray-700 transition-colors;
+  @apply px-2.5 py-1 rounded text-xs transition-colors;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-muted);
+}
+.btn-cancel:hover {
+  background: var(--glass-bg-hover);
 }
 
 .btn-extra {
-  @apply px-2.5 py-1 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600 transition-colors;
+  @apply px-2.5 py-1 rounded text-xs transition-colors;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border-light);
+  color: var(--text-secondary);
+}
+.btn-extra:hover {
+  background: var(--glass-bg-hover);
 }
 
 .btn-confirm {
-  @apply px-2.5 py-1 rounded text-xs bg-indigo-600 text-white hover:bg-indigo-500 transition-colors;
+  @apply px-2.5 py-1 rounded text-xs transition-colors;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+}
+.btn-confirm:hover {
+  background: var(--glass-bg-hover);
 }
 
 .btn-confirm.danger {
-  @apply bg-red-700 hover:bg-red-600;
+  background: rgba(127, 29, 29, 0.5);
+  border-color: rgba(185, 28, 28, 0.7);
+  color: #fca5a5;
+}
+.btn-confirm.danger:hover {
+  background: rgba(127, 29, 29, 0.7);
 }
 
 .confirm-popover-enter-active,

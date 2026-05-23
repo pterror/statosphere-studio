@@ -1,12 +1,12 @@
 <template>
   <DialogRoot v-model:open="open">
     <DialogPortal>
-      <DialogOverlay class="fixed inset-0 bg-black/60 z-40" />
-      <DialogContent class="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-gray-900 border border-gray-700 rounded-lg p-6 w-[480px] max-w-[90vw] shadow-xl">
+      <DialogOverlay class="fixed inset-0 z-40" style="background: rgba(0,0,0,0.35); backdrop-filter: blur(4px)" />
+      <DialogContent class="glass-panel fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 p-6 w-[480px] max-w-[90vw]">
         <DialogTitle class="text-gray-100 font-semibold mb-4">Share</DialogTitle>
 
         <!-- Tabs (only shown when a recipe instance is targeted) -->
-        <div v-if="recipeInstanceId" class="flex gap-1 mb-4 border-b border-gray-800">
+        <div v-if="recipeInstanceId" class="flex gap-1 mb-4" style="border-bottom: 1px solid var(--glass-border)">
           <button
             class="tab-btn"
             :class="activeTab === 'config' ? 'tab-active' : 'tab-inactive'"
@@ -32,7 +32,7 @@
             <input
               readonly
               :value="shareUrl"
-              class="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-200 font-mono overflow-ellipsis"
+              class="glass-input flex-1 rounded px-3 py-1.5 text-sm font-mono overflow-ellipsis"
               @focus="($event.target as HTMLInputElement).select()"
             />
             <button class="btn-action" @click="copyConfig">{{ copyConfigLabel }}</button>
@@ -46,7 +46,7 @@
             <input
               readonly
               :value="recipeShareUrl"
-              class="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-200 font-mono overflow-ellipsis"
+              class="glass-input flex-1 rounded px-3 py-1.5 text-sm font-mono overflow-ellipsis"
               @focus="($event.target as HTMLInputElement).select()"
             />
             <button class="btn-action" @click="copyRecipe">{{ copyRecipeLabel }}</button>
@@ -137,18 +137,31 @@ async function copyRecipe() {
 
 <style scoped>
 .btn-action {
-  @apply px-3 py-1.5 rounded text-sm bg-indigo-600 text-white hover:bg-indigo-500 transition-colors shrink-0;
+  @apply px-3 py-1.5 rounded text-sm transition-colors shrink-0;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+}
+.btn-action:hover {
+  background: var(--glass-bg-hover);
 }
 .tab-btn {
   @apply px-4 py-2 text-sm border-b-2 -mb-px transition-colors;
 }
 .tab-active {
-  @apply border-indigo-500 text-indigo-300;
+  border-color: var(--accent);
+  color: var(--accent);
 }
 .tab-inactive {
-  @apply border-transparent text-gray-400 hover:text-gray-200;
+  @apply border-transparent;
+  color: var(--text-muted);
+}
+.tab-inactive:hover {
+  color: var(--text-secondary);
 }
 .tab-disabled {
-  @apply border-transparent text-gray-600 cursor-not-allowed;
+  @apply border-transparent cursor-not-allowed;
+  color: var(--text-muted);
+  opacity: 0.5;
 }
 </style>

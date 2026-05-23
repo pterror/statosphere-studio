@@ -12,7 +12,8 @@
         <div
           v-for="item in toastStore.items"
           :key="item.id"
-          class="flex items-center gap-3 bg-gray-800 border border-gray-700 text-gray-200 text-sm px-4 py-2 rounded-lg shadow-xl pointer-events-auto"
+          class="glass-panel flex items-center gap-3 text-sm px-4 py-2 pointer-events-auto min-w-[220px]"
+          style="color: var(--text-primary)"
         >
           <span>{{ item.message }}</span>
           <button

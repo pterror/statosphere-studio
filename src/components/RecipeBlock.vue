@@ -1,13 +1,14 @@
 <template>
   <div
     data-recipe-block
-    class="border rounded-lg bg-gray-900 transition-colors"
-    :class="isFocused ? 'border-indigo-600/60' : 'border-gray-800'"
+    class="glass-panel transition-colors"
+    :class="isFocused ? 'ring-2 ring-[var(--accent)]/40' : ''"
     @mousedown.capture="onBlockMousedown"
   >
     <!-- Header -->
     <div
-      class="flex items-center gap-2 px-4 py-2 bg-gray-850 border-b border-gray-800 cursor-pointer hover:bg-gray-800"
+      class="flex items-center gap-2 px-4 py-2 cursor-pointer hover:bg-[var(--glass-bg-hover)] rounded-t-[12px]"
+      style="border-bottom: 1px solid var(--glass-border)"
       @click="collapsed = !collapsed"
     >
       <!-- Grip handle -->
@@ -88,15 +89,15 @@
             v-if="menuOpen"
             ref="menuRef"
             :style="menuStyle"
-            class="fixed z-50 bg-gray-900 border border-gray-700 rounded shadow-xl py-1 min-w-[160px]"
+            class="fixed z-50 glass-panel py-1 min-w-[160px]" style="border-radius: 10px"
             @keydown="onMenuKeydown"
           >
-            <button class="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-800" @click="onRename">Rename</button>
-            <button class="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-800" @click="onDuplicate">Duplicate</button>
-            <button class="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-800" @click="onPromote">Promote to recipe…</button>
-            <button class="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-800" @click="onExportUrl">Export as URL</button>
-            <div class="border-t border-gray-800 my-1" />
-            <button class="block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-800" @click="onRemove">Remove</button>
+            <button class="block w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-hover)]" style="color: var(--text-secondary)" @click="onRename">Rename</button>
+            <button class="block w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-hover)]" style="color: var(--text-secondary)" @click="onDuplicate">Duplicate</button>
+            <button class="block w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-hover)]" style="color: var(--text-secondary)" @click="onPromote">Promote to recipe…</button>
+            <button class="block w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-hover)]" style="color: var(--text-secondary)" @click="onExportUrl">Export as URL</button>
+            <div class="my-1" style="border-top: 1px solid var(--glass-border)" />
+            <button class="block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-[var(--glass-bg-hover)]" @click="onRemove">Remove</button>
           </div>
         </Teleport>
       </div>
@@ -114,7 +115,7 @@
     >
       <!-- Composed: nested sub-blocks -->
       <template v-if="def && def.source.kind === 'composed'">
-        <div class="flex flex-col divide-y divide-gray-800">
+        <div class="flex flex-col divide-y" style="--tw-divide-opacity: 1; border-color: var(--glass-border)">
           <template v-for="ref in [...def.source.refs, ...(instance.instanceRefs?.[''] ?? [])]" :key="ref.refId">
             <ComposedChildBlock
               :ref-def="ref"
@@ -130,7 +131,7 @@
 
       <!-- Non-composed: flat element rows -->
       <template v-else>
-        <div class="divide-y divide-gray-800">
+        <div class="divide-y" style="border-color: var(--glass-border)">
           <template v-for="et in ELEMENT_TYPES" :key="et">
             <ElementRow
               v-for="(el, i) in allElements[et]"
@@ -142,12 +143,12 @@
               @change="emit('change')"
             />
           </template>
-          <div v-if="totalCount === 0" class="px-4 py-3 text-xs text-gray-600">No elements</div>
+          <div v-if="totalCount === 0" class="px-4 py-3 text-xs" style="color: var(--text-muted)">No elements</div>
         </div>
       </template>
 
       <!-- Extra elements (always shown at bottom) -->
-      <div v-if="instance.extras && hasExtras" class="divide-y divide-gray-800 border-t border-gray-800">
+      <div v-if="instance.extras && hasExtras" class="divide-y" style="border-color: var(--glass-border); border-top: 1px solid var(--glass-border)">
         <template v-for="et in ELEMENT_TYPES" :key="et">
           <ElementRow
             v-for="(el, i) in instance.extras[et]"
@@ -162,7 +163,7 @@
       </div>
 
       <!-- Footer: + Add element -->
-      <div class="px-4 py-2 border-t border-gray-800">
+      <div class="px-4 py-2" style="border-top: 1px solid var(--glass-border)">
         <ElementTypePicker label="+ Add element ▾" @select="addElement" />
       </div>
     </div>
@@ -369,6 +370,16 @@ function onExportUrl() { closeMenu(); emit('export-url', props.instance.id) }
 
 <style scoped>
 .param-input {
-  @apply bg-gray-800 border border-gray-700 rounded px-1.5 py-0.5 text-xs text-gray-100 outline-none focus:border-indigo-500;
+  @apply rounded px-1.5 py-0.5 text-xs outline-none;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+}
+:root[data-theme="light"] .param-input {
+  background: rgba(255, 255, 255, 0.50);
+}
+.param-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 </style>

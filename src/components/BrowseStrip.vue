@@ -132,11 +132,20 @@ defineExpose({ open, focusSearch })
 
 <style scoped>
 .browse-strip {
-  @apply shrink-0 border-b border-gray-800 bg-gray-950;
+  @apply shrink-0;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .strip-bar {
-  @apply w-full flex items-center gap-3 px-4 py-2 hover:bg-gray-900/60 transition-colors cursor-pointer;
+  @apply w-full flex items-center gap-3 px-4 py-2 transition-colors cursor-pointer;
+  color: var(--text-secondary);
+}
+
+.strip-bar:hover {
+  background: var(--glass-bg-hover);
 }
 
 .filter-chips-inline {
@@ -144,14 +153,24 @@ defineExpose({ open, focusSearch })
 }
 
 .chip-sm {
-  @apply px-2 py-0.5 rounded-full text-[11px] text-gray-500 bg-gray-800 hover:bg-gray-700 hover:text-gray-300 transition-colors;
+  @apply px-2 py-0.5 rounded-full text-[11px] transition-colors;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  color: var(--text-muted);
+}
+
+.chip-sm:hover {
+  background: var(--glass-bg-hover);
+  color: var(--text-secondary);
 }
 
 .chip-sm.active {
-  @apply bg-indigo-800/60 text-indigo-300;
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .strip-body {
-  @apply border-t border-gray-800;
+  border-top: 1px solid var(--glass-border);
 }
 </style>

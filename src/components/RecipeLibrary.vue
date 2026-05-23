@@ -10,7 +10,8 @@
       <input
         ref="searchInput"
         v-model="query"
-        class="flex-1 bg-transparent text-gray-100 text-sm outline-none placeholder-gray-600"
+        class="flex-1 bg-transparent text-sm outline-none"
+        style="color: var(--text-primary)"
         placeholder="Search recipes…"
         @keydown.esc.prevent="emit('close')"
         @keydown.up.prevent="moveSelection(-1)"
@@ -251,11 +252,14 @@ onMounted(() => {
 }
 
 .search-row {
-  @apply flex items-center gap-2 px-4 py-3 border-b border-gray-800;
+  @apply flex items-center gap-2 px-4 py-3;
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .recipe-library.inline .search-row {
-  @apply border border-gray-700 rounded-lg bg-gray-900/60;
+  @apply rounded-lg;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
 }
 
 .filter-chips {
@@ -267,11 +271,21 @@ onMounted(() => {
 }
 
 .chip {
-  @apply px-3 py-1 rounded-full text-xs text-gray-400 bg-gray-800 hover:bg-gray-700 hover:text-gray-200 transition-colors;
+  @apply px-3 py-1 rounded-full text-xs transition-colors;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  color: var(--text-muted);
+}
+
+.chip:hover {
+  background: var(--glass-bg-hover);
+  color: var(--text-secondary);
 }
 
 .chip.active {
-  @apply bg-indigo-700 text-indigo-100;
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .card-grid {
@@ -296,11 +310,19 @@ onMounted(() => {
 }
 
 .recipe-card {
-  @apply flex flex-col p-3 rounded-lg bg-gray-800 border border-gray-700 hover:border-indigo-500/50 transition-colors cursor-grab text-left;
+  @apply flex flex-col p-3 rounded-lg transition-colors cursor-grab text-left;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+}
+
+.recipe-card:hover {
+  background: var(--glass-bg-hover);
+  border-color: var(--accent);
 }
 
 .recipe-card.highlighted {
-  @apply border-indigo-500 bg-indigo-600/10;
+  background: var(--accent-soft);
+  border-color: var(--accent);
 }
 
 .recipe-card:active {
@@ -324,10 +346,14 @@ onMounted(() => {
 }
 
 .keyboard-hint {
-  @apply flex gap-4 px-4 py-2 border-t border-gray-800 text-xs text-gray-600;
+  @apply flex gap-4 px-4 py-2 text-xs;
+  border-top: 1px solid var(--glass-border);
+  color: var(--text-muted);
 }
 
 kbd {
-  @apply bg-gray-800 px-1 rounded;
+  @apply px-1 rounded;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
 }
 </style>

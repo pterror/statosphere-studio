@@ -10,13 +10,16 @@
         v-if="open"
         ref="popoverRef"
         :style="popoverStyle"
-        class="fixed z-50 bg-gray-900 border border-gray-700 rounded shadow-xl py-1 min-w-[170px]"
+        class="fixed z-50 glass-panel py-1 min-w-[170px]" style="border-radius: 10px"
         @keydown="onKeydown"
       >
         <button
           v-for="item in ITEMS"
           :key="item.kind"
-          class="flex items-center justify-between w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-gray-100"
+          class="flex items-center justify-between w-full text-left px-4 py-2 text-sm transition-colors"
+          style="color: var(--text-secondary)"
+          @mouseenter="($event.currentTarget as HTMLElement).style.background = 'var(--glass-bg-hover)'"
+          @mouseleave="($event.currentTarget as HTMLElement).style.background = ''"
           @click="select(item.kind)"
         >
           <span>{{ item.label }}</span>
@@ -113,6 +116,13 @@ onUnmounted(removeGlobalListeners)
 
 <style scoped>
 .btn-action {
-  @apply px-3 py-1 rounded text-sm bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-gray-100 transition-colors;
+  @apply px-3 py-1 rounded text-sm transition-colors;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+}
+.btn-action:hover {
+  background: var(--glass-bg-hover);
+  color: var(--text-primary);
 }
 </style>

@@ -1,8 +1,8 @@
 <template>
   <DialogRoot v-model:open="open">
     <DialogPortal>
-      <DialogOverlay class="fixed inset-0 bg-black/60 z-40" />
-      <DialogContent class="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-gray-900 border border-gray-700 rounded-lg p-6 w-[540px] max-w-[92vw] max-h-[85vh] overflow-y-auto shadow-xl">
+      <DialogOverlay class="fixed inset-0 z-40" style="background: rgba(0,0,0,0.35); backdrop-filter: blur(4px)" />
+      <DialogContent class="glass-panel fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 p-6 w-[540px] max-w-[92vw] max-h-[85vh] overflow-y-auto">
         <DialogTitle class="text-gray-100 font-semibold mb-5 text-base">Settings</DialogTitle>
 
         <!-- Appearance -->
@@ -12,10 +12,8 @@
             <button
               v-for="t in (['light', 'dark', 'auto'] as const)"
               :key="t"
-              class="px-3 py-1 rounded text-sm border transition-colors"
-              :class="settings.theme === t
-                ? 'bg-indigo-600 border-indigo-500 text-white'
-                : 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700'"
+              class="glass-button px-3 py-1 rounded text-sm"
+              :data-tone="settings.theme === t ? 'accent' : undefined"
               @click="settings.setTheme(t)"
             >{{ t }}</button>
           </div>
@@ -33,7 +31,7 @@
             <div
               v-for="prefix in settings.trustedPrefixes"
               :key="prefix"
-              class="flex items-center gap-2 text-xs text-gray-300 bg-gray-800 rounded px-2 py-1"
+              class="flex items-center gap-2 text-xs rounded px-2 py-1 glass-panel-soft" style="color: var(--text-secondary)"
             >
               <span class="flex-1 font-mono truncate">{{ prefix }}</span>
               <button class="text-red-400 hover:text-red-300 shrink-0" @click="settings.removeTrustedPrefix(prefix)">&times;</button>
@@ -42,11 +40,11 @@
           <div class="flex gap-2">
             <input
               v-model="newPrefix"
-              class="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs font-mono text-gray-200 outline-none focus:border-indigo-500"
+              class="glass-input flex-1 rounded px-2 py-1 text-xs font-mono"
               placeholder="https://example.com/"
               @keydown.enter="addPrefix"
             />
-            <button class="px-3 py-1 rounded text-xs bg-indigo-600 hover:bg-indigo-500 text-white" @click="addPrefix">Add</button>
+            <button class="glass-button px-3 py-1 rounded text-xs" data-tone="accent" @click="addPrefix">Add</button>
           </div>
         </section>
 
@@ -76,7 +74,7 @@
             <div
               v-for="(slot, name) in draftsStore.slots"
               :key="name"
-              class="flex items-center gap-2 text-xs bg-gray-800 rounded px-2 py-1"
+              class="flex items-center gap-2 text-xs rounded px-2 py-1 glass-panel-soft"
             >
               <span class="flex-1 text-gray-300 truncate">{{ slot.name }}</span>
               <span class="text-gray-500">{{ new Date(slot.updatedAt).toLocaleDateString() }}</span>
@@ -90,7 +88,7 @@
             <div
               v-for="def in recipesStore.customLibrary"
               :key="def.id"
-              class="flex items-center gap-2 text-xs bg-gray-800 rounded px-2 py-1"
+              class="flex items-center gap-2 text-xs rounded px-2 py-1 glass-panel-soft"
             >
               <span class="flex-1 text-gray-300 truncate">{{ def.name }}</span>
               <button class="text-red-400 hover:text-red-300 shrink-0" @click="recipesStore.removeCustomRecipe(def.id)">&times;</button>
@@ -99,17 +97,17 @@
 
           <p class="text-xs text-gray-500 mb-2">Export your studio state first if you want a backup.</p>
           <div class="flex gap-2 flex-wrap">
-            <button class="px-3 py-1 rounded text-xs bg-gray-800 border border-gray-700 text-gray-300 hover:bg-gray-700" @click="settings.clearScratchSlot()">Clear scratch slot</button>
-            <button class="px-3 py-1 rounded text-xs bg-gray-800 border border-gray-700 text-gray-300 hover:bg-gray-700" @click="exportEverything">Export everything…</button>
-            <button ref="importBtn" class="px-3 py-1 rounded text-xs bg-gray-800 border border-gray-700 text-gray-300 hover:bg-gray-700" @click="importBundleClick">Import bundle…</button>
-            <button ref="resetBtn" class="px-3 py-1 rounded text-xs bg-red-900/70 border border-red-700 text-red-300 hover:bg-red-800/70" @click="resetPopoverOpen = true">Reset all studio data…</button>
+            <button class="glass-button px-3 py-1 rounded text-xs" @click="settings.clearScratchSlot()">Clear scratch slot</button>
+            <button class="glass-button px-3 py-1 rounded text-xs" @click="exportEverything">Export everything…</button>
+            <button ref="importBtn" class="glass-button px-3 py-1 rounded text-xs" @click="importBundleClick">Import bundle…</button>
+            <button ref="resetBtn" class="px-3 py-1 rounded text-xs border border-red-700 text-red-300 hover:bg-red-900/30" style="background: rgba(127,29,29,0.4)" @click="resetPopoverOpen = true">Reset all studio data…</button>
           </div>
 
           <input ref="fileInput" type="file" accept=".json" class="hidden" @change="onFileChange" />
         </section>
 
         <div class="flex justify-end">
-          <DialogClose class="px-3 py-1.5 rounded text-sm bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors">Close</DialogClose>
+          <DialogClose class="glass-button px-3 py-1.5 rounded text-sm">Close</DialogClose>
         </div>
       </DialogContent>
     </DialogPortal>

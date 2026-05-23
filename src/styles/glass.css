@@ -1,0 +1,106 @@
+:root[data-theme="dark"], :root:not([data-theme]) {
+  --glass-bg: rgba(255, 255, 255, 0.04);
+  --glass-bg-hover: rgba(255, 255, 255, 0.06);
+  --glass-bg-strong: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border-light: rgba(255, 255, 255, 0.12);
+  --glass-border-dark: rgba(0, 0, 0, 0.25);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.32);
+  --glass-blur: blur(12px);
+  --accent: #7d8cf5;
+  --accent-soft: rgba(125, 140, 245, 0.15);
+  --text-primary: rgba(255, 255, 255, 0.92);
+  --text-secondary: rgba(255, 255, 255, 0.62);
+  --text-muted: rgba(255, 255, 255, 0.40);
+  --backdrop-grad: radial-gradient(ellipse at top, #1f2440 0%, #0d0f1c 50%, #060710 100%);
+}
+
+:root[data-theme="light"] {
+  --glass-bg: rgba(255, 255, 255, 0.60);
+  --glass-bg-hover: rgba(255, 255, 255, 0.75);
+  --glass-bg-strong: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-border-light: rgba(255, 255, 255, 0.95);
+  --glass-border-dark: rgba(0, 0, 0, 0.12);
+  --glass-shadow: 0 8px 24px rgba(50, 60, 90, 0.10);
+  --glass-blur: blur(12px);
+  --accent: #5e6dd3;
+  --accent-soft: rgba(94, 109, 211, 0.12);
+  --text-primary: rgba(20, 25, 50, 0.92);
+  --text-secondary: rgba(20, 25, 50, 0.65);
+  --text-muted: rgba(20, 25, 50, 0.42);
+  --backdrop-grad: radial-gradient(ellipse at top, #eef2ff 0%, #e0e7f5 50%, #d2dbef 100%);
+}
+
+body {
+  background: var(--backdrop-grad);
+  background-attachment: fixed;
+  color: var(--text-primary);
+}
+
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-top-color: var(--glass-border-light);
+  border-bottom-color: var(--glass-border-dark);
+  border-radius: 12px;
+  box-shadow: var(--glass-shadow);
+}
+
+.glass-panel-soft {
+  background: var(--glass-bg-hover);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+}
+
+.glass-bar {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--glass-border);
+  box-shadow: 0 1px 0 var(--glass-border-light) inset;
+}
+
+.glass-button {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-top-color: var(--glass-border-light);
+  color: var(--text-primary);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 120ms ease-out;
+}
+.glass-button:hover {
+  background: var(--glass-bg-hover);
+}
+.glass-button[data-tone="accent"] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.glass-input {
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  padding: 4px 8px;
+}
+:root[data-theme="light"] .glass-input {
+  background: rgba(255, 255, 255, 0.50);
+}
+.glass-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

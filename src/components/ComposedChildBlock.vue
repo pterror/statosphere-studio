@@ -1,13 +1,16 @@
 <template>
   <!-- Depth guard: >2 levels show stub -->
-  <div v-if="depth >= 2" class="pl-4 py-2 text-xs text-gray-600 border-l-2 border-gray-800 ml-4">
+  <div v-if="depth >= 2" class="pl-4 py-2 text-xs ml-4" style="color: var(--text-muted); border-left: 2px solid var(--glass-border)">
     <span title="Deep nesting view coming soon">Show sub-tree →</span>
   </div>
 
-  <div v-else class="pl-4 ml-2 border-l-2 border-gray-800">
+  <div v-else class="glass-panel-soft pl-4 ml-2" style="border-left: 2px solid var(--glass-border)">
     <!-- Child header -->
     <div
-      class="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-gray-800 rounded"
+      class="flex items-center gap-2 px-3 py-1.5 cursor-pointer rounded"
+      style="transition: background 120ms ease-out"
+      @mouseenter="($event.currentTarget as HTMLElement).style.background = 'var(--glass-bg-hover)'"
+      @mouseleave="($event.currentTarget as HTMLElement).style.background = ''"
       @click="collapsed = !collapsed"
     >
       <span class="text-xs text-gray-400 font-medium">{{ childDef?.name ?? refDef.refId }}</span>
@@ -75,7 +78,7 @@
     <div v-if="!collapsed">
       <!-- Further composed children -->
       <template v-if="childDef && childDef.source.kind === 'composed'">
-        <div class="flex flex-col divide-y divide-gray-800">
+        <div class="flex flex-col divide-y" style="border-color: var(--glass-border)">
           <ComposedChildBlock
             v-for="childRef in childDef.source.refs"
             :key="childRef.refId"
@@ -91,7 +94,7 @@
 
       <!-- Leaf: show materialized elements -->
       <template v-else>
-        <div class="divide-y divide-gray-800">
+        <div class="divide-y" style="border-color: var(--glass-border)">
           <template v-for="et in ELEMENT_TYPES" :key="et">
             <ElementRow
               v-for="(el, i) in childElements[et]"
@@ -102,7 +105,7 @@
               @change="emit('change')"
             />
           </template>
-          <div v-if="childElementCount === 0" class="px-4 py-2 text-xs text-gray-600">No elements</div>
+          <div v-if="childElementCount === 0" class="px-4 py-2 text-xs" style="color: var(--text-muted)">No elements</div>
         </div>
       </template>
     </div>
@@ -187,6 +190,16 @@ const childElementCount = computed(() =>
 
 <style scoped>
 .param-input {
-  @apply bg-gray-800 border border-gray-700 rounded px-1.5 py-0.5 text-xs text-gray-100 outline-none focus:border-indigo-500;
+  @apply rounded px-1.5 py-0.5 text-xs outline-none;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+}
+:root[data-theme="light"] .param-input {
+  background: rgba(255, 255, 255, 0.50);
+}
+.param-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 </style>
