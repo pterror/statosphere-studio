@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+// eslint-disable-next-line import/no-cycle
+import { useRecipesStore } from './recipes'
 import Ajv from 'ajv'
 import addFormats from 'ajv-formats'
 import variableSchema from '../../schemas/variable-schema.json'
@@ -109,10 +111,8 @@ export interface ValidationErrors {
   contentRules: string[]
 }
 
-let scratchTimer: ReturnType<typeof setTimeout> | null = null
-
 export const useConfigStore = defineStore('config', () => {
-  const config = ref<ConfigTree>({
+  const errors = ref<ValidationErrors>({
     variables: [],
     functions: [],
     classifiers: [],
@@ -121,12 +121,17 @@ export const useConfigStore = defineStore('config', () => {
   })
 
   const dirty = ref(false)
-  const errors = ref<ValidationErrors>({
-    variables: [],
-    functions: [],
-    classifiers: [],
-    generators: [],
-    contentRules: [],
+
+  const config = computed<ConfigTree>(() => {
+    const recipesStore = useRecipesStore()
+    const m = recipesStore.materialized
+    return {
+      variables: m.variables,
+      functions: m.functions,
+      classifiers: m.classifiers,
+      generators: m.generators,
+      contentRules: m.contentRules,
+    }
   })
 
   function validate() {
@@ -150,11 +155,8 @@ export const useConfigStore = defineStore('config', () => {
 
   function loadJson(raw: string): string | null {
     try {
-      const parsed = JSON.parse(raw)
-      config.value = parsed
-      dirty.value = true
-      validate()
-      scheduleScratch()
+      const parsed = JSON.parse(raw) as ConfigTree
+      replace(parsed)
       return null
     } catch (e) {
       return (e as Error).message
@@ -164,7 +166,6 @@ export const useConfigStore = defineStore('config', () => {
   function markDirty() {
     dirty.value = true
     validate()
-    scheduleScratch()
   }
 
   function markSaved() {
@@ -172,26 +173,29 @@ export const useConfigStore = defineStore('config', () => {
   }
 
   function loadTemplate(data: ConfigTree) {
-    config.value = data
+    replace(data)
     dirty.value = true
-    validate()
-    scheduleScratch()
   }
 
   function replace(data: ConfigTree) {
-    config.value = data
+    const recipesStore = useRecipesStore()
+    const extras = {
+      variables: data.variables ?? [],
+      functions: data.functions ?? [],
+      classifiers: data.classifiers ?? [],
+      generators: data.generators ?? [],
+      contentRules: data.contentRules ?? [],
+    }
+    const existingCustom = recipesStore.instances.find((i) => i.recipeId === 'custom')
+    if (existingCustom) {
+      existingCustom.extras = extras
+    } else {
+      const id = recipesStore.addInstance('custom')
+      const inst = recipesStore.instances.find((i) => i.id === id)
+      if (inst) inst.extras = extras
+    }
     dirty.value = false
     validate()
-    scheduleScratch()
-  }
-
-  function scheduleScratch() {
-    if (scratchTimer !== null) clearTimeout(scratchTimer)
-    scratchTimer = setTimeout(async () => {
-      scratchTimer = null
-      const { useDraftsStore } = await import('./drafts')
-      useDraftsStore().saveScratch(config.value)
-    }, 500)
   }
 
   return { config, dirty, errors, json, loadJson, loadTemplate, replace, markDirty, markSaved, validate }

@@ -4,7 +4,7 @@
     :class="embedded ? 'h-[600px] relative' : 'h-screen'"
   >
     <TopBar v-if="!embedded" />
-    <Layout :class="embedded ? 'pt-0' : ''" />
+    <StreamCanvas :class="embedded ? 'pt-0' : ''" />
     <a
       v-if="embedded"
       :href="openInStudioUrl"
@@ -18,12 +18,12 @@
 <script setup lang="ts">
 import { onMounted, watch, computed } from 'vue'
 import TopBar from './TopBar.vue'
-import Layout from './Layout.vue'
+import StreamCanvas from './StreamCanvas.vue'
 import { hydrateFromLocation } from '../share/hydrate'
 import { encodeConfig, decodeConfig } from '../share/encode'
 import { useConfigStore } from '../stores/config'
+import { useRecipesStore } from '../stores/recipes'
 import { useLintsStore } from '../stores/lints'
-import type { ConfigTree } from '../stores/config'
 
 const props = withDefaults(defineProps<{
   embedded?: boolean
@@ -37,17 +37,6 @@ const props = withDefaults(defineProps<{
   spaUrl: 'https://pterror.github.io/statosphere-studio/',
 })
 
-const templateFiles = import.meta.glob('../../templates/*.json', { eager: true }) as Record<
-  string,
-  { default: ConfigTree }
->
-
-function getTemplateData(slug: string): ConfigTree | null {
-  const key = `../../templates/${slug}.json`
-  const mod = templateFiles[key]
-  return mod ? (mod.default ?? (mod as unknown as ConfigTree)) : null
-}
-
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
 const openInStudioUrl = computed(() => {
@@ -59,6 +48,7 @@ const openInStudioUrl = computed(() => {
 
 onMounted(() => {
   const configStore = useConfigStore()
+  const recipesStore = useRecipesStore()
   const lintsStore = useLintsStore()
 
   if (props.share) {
@@ -67,8 +57,19 @@ onMounted(() => {
     } catch {
     }
   } else if (props.template) {
-    const data = getTemplateData(props.template)
-    if (data) configStore.loadTemplate(data)
+    const builtinMatch = ['hp-tracker', 'mood-companion', 'stamina-tracker', 'background-swapper',
+      'npc-relationships', 'branching-scenario', 'inventory', 'mystery-game',
+      'persistent-memory', 'time-of-day'].includes(props.template)
+    if (builtinMatch) {
+      recipesStore.addInstance(props.template)
+    } else {
+      // Legacy: try to load from template JSON files
+      const templateFiles = import.meta.glob('../../templates/*.json', { eager: true }) as Record<string, { default: any }>
+      const key = `../../templates/${props.template}.json`
+      const mod = templateFiles[key]
+      const data = mod ? (mod.default ?? mod) : null
+      if (data) configStore.loadTemplate(data)
+    }
   } else {
     if (typeof window !== 'undefined') {
       hydrateFromLocation()
