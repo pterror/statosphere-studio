@@ -17,6 +17,7 @@
       <button class="text-indigo-300 hover:text-white text-xs ml-2" @click="rcpBanner = null">&times;</button>
     </div>
     <StreamCanvas ref="canvasRef" :class="embedded ? 'pt-0' : ''" @open-library-modal="libraryModalOpen = true" />
+    <Toast />
     <!-- cmd-K modal -->
     <Teleport to="body">
       <div v-if="libraryModalOpen" class="fixed inset-0 z-50 flex items-start justify-center pt-[12vh]" @mousedown.self="libraryModalOpen = false">
@@ -37,17 +38,20 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch, computed, ref } from 'vue'
+import { onMounted, onUnmounted, watch, computed, ref } from 'vue'
 import TopBar from './TopBar.vue'
 import StreamCanvas from './StreamCanvas.vue'
 import RecipeLibrary from './RecipeLibrary.vue'
+import Toast from './Toast.vue'
 import { hydrateFromLocation } from '../share/hydrate'
 import { encodeConfig, decodeConfig } from '../share/encode'
 import { useConfigStore } from '../stores/config'
 import { useRecipesStore } from '../stores/recipes'
 import { useLintsStore } from '../stores/lints'
 import { useSettingsStore } from '../stores/settings'
+import { useUndoStore } from '../stores/undo'
 import { registerRecipe } from '../recipes/registry'
+import { useShortcuts } from '../composables/use-shortcuts'
 
 const props = withDefaults(defineProps<{
   embedded?: boolean
@@ -62,6 +66,7 @@ const props = withDefaults(defineProps<{
 })
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
+let teardownShortcuts: (() => void) | null = null
 
 const rcpBanner = ref<{ recipeId: string; name: string } | null>(null)
 const libraryModalOpen = ref(false)
@@ -113,11 +118,21 @@ function applyTheme(t: 'light' | 'dark' | 'auto') {
   }
 }
 
+onUnmounted(() => teardownShortcuts?.())
+
 onMounted(() => {
   const configStore = useConfigStore()
   const recipesStore = useRecipesStore()
   const lintsStore = useLintsStore()
   const settingsStore = useSettingsStore()
+  const undoStore = useUndoStore()
+
+  teardownShortcuts = useShortcuts({
+    'meta+z': () => undoStore.undo(),
+    'ctrl+z': () => undoStore.undo(),
+    'meta+shift+z': () => undoStore.redo(),
+    'ctrl+shift+z': () => undoStore.redo(),
+  })
 
   applyTheme(settingsStore.theme)
   watch(() => settingsStore.theme, applyTheme)

@@ -4,6 +4,8 @@ import type { RecipeInstance, RecipeDef, ElementType, SchemaArrays } from '../re
 import { materializeInstances, localsFromTemplate } from '../recipes/materialize'
 import { getRecipe, registerRecipe, unregisterRecipe } from '../recipes/registry'
 import { useSettingsStore } from './settings'
+import { useUndoStore } from './undo'
+import { useToastStore } from './toast'
 
 const STORAGE_KEY = 'statosphere-studio-recipes-v2'
 const LIBRARY_KEY = 'statosphere-studio-custom-library-v2'
@@ -71,6 +73,41 @@ export const useRecipesStore = defineStore('recipes', () => {
     saveToStorage(instances.value)
   }
 
+  function snapshotInstances(): RecipeInstance[] {
+    return JSON.parse(JSON.stringify(instances.value))
+  }
+
+  function restoreInstances(snapshot: RecipeInstance[]): void {
+    instances.value.splice(0, instances.value.length, ...snapshot)
+    persist()
+  }
+
+  // Debounced param-edit snapshot (Option B for non-destructive param edits)
+  const paramDebounceTimers = new Map<string, ReturnType<typeof setTimeout>>()
+  const paramDebounceSnapshots = new Map<string, RecipeInstance[]>()
+
+  function scheduleParamSnapshot(instanceId: string, label: string): void {
+    const undoStore = useUndoStore()
+    if (!paramDebounceSnapshots.has(instanceId)) {
+      paramDebounceSnapshots.set(instanceId, snapshotInstances())
+    }
+    if (paramDebounceTimers.has(instanceId)) {
+      clearTimeout(paramDebounceTimers.get(instanceId)!)
+    }
+    const timer = setTimeout(() => {
+      paramDebounceTimers.delete(instanceId)
+      const before = paramDebounceSnapshots.get(instanceId)!
+      paramDebounceSnapshots.delete(instanceId)
+      const after = snapshotInstances()
+      undoStore.push({
+        label,
+        do: () => { restoreInstances(after) },
+        undo: () => { restoreInstances(before) },
+      })
+    }, 500)
+    paramDebounceTimers.set(instanceId, timer)
+  }
+
   function addInstance(recipeId: string, atIndex?: number): string {
     const recipe = getRecipe(recipeId)
     if (!recipe) return ''
@@ -87,31 +124,52 @@ export const useRecipesStore = defineStore('recipes', () => {
       pinned: [],
       extras: emptyArrays(),
     }
+    const before = snapshotInstances()
     if (atIndex !== undefined && atIndex >= 0 && atIndex <= instances.value.length) {
       instances.value.splice(atIndex, 0, inst)
     } else {
       instances.value.push(inst)
     }
     persist()
+    const after = snapshotInstances()
+    useUndoStore().push({
+      label: `Add "${recipe.name}"`,
+      do: () => { restoreInstances(after) },
+      undo: () => { restoreInstances(before) },
+    })
     return id
   }
 
   function reorderInstance(instanceId: string, newIndex: number): void {
     const idx = instances.value.findIndex((i) => i.id === instanceId)
     if (idx === -1) return
+    const before = snapshotInstances()
     const [inst] = instances.value.splice(idx, 1)
     const clampedIndex = Math.max(0, Math.min(newIndex, instances.value.length))
     instances.value.splice(clampedIndex, 0, inst)
     persist()
+    const after = snapshotInstances()
+    useUndoStore().push({
+      label: `Reorder "${inst.name}"`,
+      do: () => { restoreInstances(after) },
+      undo: () => { restoreInstances(before) },
+    })
   }
 
   function addComposedRefToInstance(instanceId: string, refIdPath: string, ref: import('../recipes/types').ComposedRef): void {
     const inst = instances.value.find((i) => i.id === instanceId)
     if (!inst) return
+    const before = snapshotInstances()
     if (!inst.instanceRefs) inst.instanceRefs = {}
     if (!inst.instanceRefs[refIdPath]) inst.instanceRefs[refIdPath] = []
     inst.instanceRefs[refIdPath].push(ref)
     persist()
+    const after = snapshotInstances()
+    useUndoStore().push({
+      label: `Add atom to "${inst.name}"`,
+      do: () => { restoreInstances(after) },
+      undo: () => { restoreInstances(before) },
+    })
   }
 
   function moveElement(
@@ -124,6 +182,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     const srcInst = instances.value.find((i) => i.id === sourceInstanceId)
     const tgtInst = instances.value.find((i) => i.id === targetInstanceId)
     if (!srcInst || !tgtInst) return
+    const before = snapshotInstances()
 
     // Determine if element is pinned or in extras
     const pinnedIdx = srcInst.pinned.findIndex(
@@ -158,15 +217,33 @@ export const useRecipesStore = defineStore('recipes', () => {
     if (elementData === null) return
     tgtInst.extras[elementType].push(elementData)
     persist()
+    const after = snapshotInstances()
+    useUndoStore().push({
+      label: `Move element "${elementName}"`,
+      do: () => { restoreInstances(after) },
+      undo: () => { restoreInstances(before) },
+    })
   }
 
   function removeInstance(id: string): void {
     const idx = instances.value.findIndex((i) => i.id === id)
-    if (idx !== -1) {
-      instances.value.splice(idx, 1)
-      if (focusedInstanceId.value === id) focusedInstanceId.value = null
-      persist()
-    }
+    if (idx === -1) return
+    const before = snapshotInstances()
+    const name = instances.value[idx].name
+    instances.value.splice(idx, 1)
+    if (focusedInstanceId.value === id) focusedInstanceId.value = null
+    persist()
+    const after = snapshotInstances()
+    const undoStore = useUndoStore()
+    undoStore.push({
+      label: `Remove "${name}"`,
+      do: () => { restoreInstances(after) },
+      undo: () => { restoreInstances(before) },
+    })
+    useToastStore().show(`Removed "${name}"`, {
+      durationMs: 8000,
+      action: { label: 'Undo', onClick: () => undoStore.undo() },
+    })
   }
 
   function renameInstance(id: string, name: string): void {
@@ -192,10 +269,10 @@ export const useRecipesStore = defineStore('recipes', () => {
 
   function updateParams(id: string, params: Record<string, unknown>): void {
     const inst = instances.value.find((i) => i.id === id)
-    if (inst) {
-      inst.params = { ...inst.params, ...params }
-      persist()
-    }
+    if (!inst) return
+    inst.params = { ...inst.params, ...params }
+    persist()
+    scheduleParamSnapshot(id, `Edit params "${inst.name}"`)
   }
 
   function pinElement(instanceId: string, elementType: ElementType, elementName: string): void {
@@ -210,8 +287,15 @@ export const useRecipesStore = defineStore('recipes', () => {
     const el = mat[elementType].find((e: any) => e?.name === elementName)
     if (!el) return
     if (!inst.pinned.find((p) => p.elementType === elementType && p.elementName === elementName)) {
+      const before = snapshotInstances()
       inst.pinned.push({ elementType, elementName, override: JSON.parse(JSON.stringify(el)) })
       persist()
+      const after = snapshotInstances()
+      useUndoStore().push({
+        label: `Pin element "${elementName}"`,
+        do: () => { restoreInstances(after) },
+        undo: () => { restoreInstances(before) },
+      })
     }
   }
 
@@ -219,20 +303,31 @@ export const useRecipesStore = defineStore('recipes', () => {
     const inst = instances.value.find((i) => i.id === instanceId)
     if (!inst) return
     const idx = inst.pinned.findIndex((p) => p.elementType === elementType && p.elementName === elementName)
-    if (idx !== -1) {
-      inst.pinned.splice(idx, 1)
-      persist()
-    }
+    if (idx === -1) return
+    const before = snapshotInstances()
+    inst.pinned.splice(idx, 1)
+    persist()
+    const after = snapshotInstances()
+    const undoStore = useUndoStore()
+    undoStore.push({
+      label: `Unpin element "${elementName}"`,
+      do: () => { restoreInstances(after) },
+      undo: () => { restoreInstances(before) },
+    })
+    useToastStore().show(`Removed element "${elementName}"`, {
+      durationMs: 8000,
+      action: { label: 'Undo', onClick: () => undoStore.undo() },
+    })
   }
 
   function updatePinnedElement(instanceId: string, elementType: ElementType, elementName: string, override: any): void {
     const inst = instances.value.find((i) => i.id === instanceId)
     if (!inst) return
     const pinned = inst.pinned.find((p) => p.elementType === elementType && p.elementName === elementName)
-    if (pinned) {
-      pinned.override = override
-      persist()
-    }
+    if (!pinned) return
+    pinned.override = override
+    persist()
+    scheduleParamSnapshot(instanceId + '/' + elementName, `Edit element "${elementName}"`)
   }
 
   function setChildOverride(instanceId: string, refIdPath: string, key: string, value: unknown): void {
@@ -242,23 +337,38 @@ export const useRecipesStore = defineStore('recipes', () => {
     if (!inst.childOverrides[refIdPath]) inst.childOverrides[refIdPath] = {}
     inst.childOverrides[refIdPath][key] = value
     persist()
+    scheduleParamSnapshot(instanceId + '/child/' + refIdPath, `Edit child params`)
   }
 
   function clearChildOverride(instanceId: string, refIdPath: string, key: string): void {
     const inst = instances.value.find((i) => i.id === instanceId)
     if (!inst?.childOverrides?.[refIdPath]) return
+    const before = snapshotInstances()
     delete inst.childOverrides[refIdPath][key]
     if (Object.keys(inst.childOverrides[refIdPath]).length === 0) {
       delete inst.childOverrides[refIdPath]
     }
     persist()
+    const after = snapshotInstances()
+    useUndoStore().push({
+      label: `Clear child param "${key}"`,
+      do: () => { restoreInstances(after) },
+      undo: () => { restoreInstances(before) },
+    })
   }
 
   function addExtra(instanceId: string, elementType: ElementType, element: any): void {
     const inst = instances.value.find((i) => i.id === instanceId)
     if (!inst) return
+    const before = snapshotInstances()
     inst.extras[elementType].push(element)
     persist()
+    const after = snapshotInstances()
+    useUndoStore().push({
+      label: `Add element to "${inst.name}"`,
+      do: () => { restoreInstances(after) },
+      undo: () => { restoreInstances(before) },
+    })
   }
 
   // Custom library actions

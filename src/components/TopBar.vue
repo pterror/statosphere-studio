@@ -2,6 +2,20 @@
   <header class="flex items-center gap-2 px-4 py-2 bg-gray-900 border-b border-gray-800 shrink-0">
     <span class="font-semibold text-indigo-400 mr-auto">Statosphere Studio</span>
     <button class="btn-action" @click="emit('toggle-browse')">Browse ▾</button>
+    <button
+      class="btn-action"
+      :class="!undoStore.canUndo ? 'opacity-40 cursor-not-allowed' : ''"
+      :disabled="!undoStore.canUndo"
+      title="Undo (⌘Z)"
+      @click="undoStore.undo()"
+    >↶</button>
+    <button
+      class="btn-action"
+      :class="!undoStore.canRedo ? 'opacity-40 cursor-not-allowed' : ''"
+      :disabled="!undoStore.canRedo"
+      title="Redo (⌘⇧Z)"
+      @click="undoStore.redo()"
+    >↷</button>
     <ElementTypePicker label="+ Element ▾" @select="addElement" />
     <span
       :title="validityTitle"
@@ -50,6 +64,7 @@ import GraphModal from './GraphModal.vue'
 import ElementTypePicker from './ElementTypePicker.vue'
 import { useConfigStore } from '../stores/config'
 import { useRecipesStore } from '../stores/recipes'
+import { useUndoStore } from '../stores/undo'
 import type { ElementType } from '../recipes/types'
 
 const emit = defineEmits<{
@@ -59,6 +74,7 @@ const emit = defineEmits<{
 
 const configStore = useConfigStore()
 const recipesStore = useRecipesStore()
+const undoStore = useUndoStore()
 
 const shareOpen = ref(false)
 const importOpen = ref(false)

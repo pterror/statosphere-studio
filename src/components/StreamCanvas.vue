@@ -13,14 +13,6 @@
       </div>
     </Teleport>
 
-    <!-- Toast -->
-    <Teleport to="body">
-      <div
-        v-if="toastMsg"
-        class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-800 border border-gray-700 text-gray-200 text-sm px-4 py-2 rounded-lg shadow-xl pointer-events-none"
-      >{{ toastMsg }}</div>
-    </Teleport>
-
     <!-- Empty state: inline library IS the canvas -->
     <template v-if="recipesStore.instances.length === 0">
       <div
@@ -97,6 +89,7 @@ import { ref, nextTick, defineComponent, h } from 'vue'
 import { useRecipesStore } from '../stores/recipes'
 import { useConfigStore } from '../stores/config'
 import { useSettingsStore } from '../stores/settings'
+import { useToastStore } from '../stores/toast'
 import RecipeBlock from './RecipeBlock.vue'
 import JsonFooter from './JsonFooter.vue'
 import ShareDialog from './ShareDialog.vue'
@@ -113,6 +106,7 @@ const emit = defineEmits<{
 const recipesStore = useRecipesStore()
 const configStore = useConfigStore()
 const settingsStore = useSettingsStore()
+const toastStore = useToastStore()
 
 const shareDialogOpen = ref(false)
 const shareTargetInstanceId = ref<string | undefined>(undefined)
@@ -120,13 +114,9 @@ const browseStripRef = ref<InstanceType<typeof BrowseStrip> | null>(null)
 const activeDropIndex = ref<number | undefined>(undefined)
 const draggingInstanceId = ref<string | undefined>(undefined)
 const fileDragActive = ref(false)
-const toastMsg = ref('')
-let toastTimer: ReturnType<typeof setTimeout> | null = null
 
 function showToast(msg: string) {
-  toastMsg.value = msg
-  if (toastTimer) clearTimeout(toastTimer)
-  toastTimer = setTimeout(() => { toastMsg.value = '' }, 3000)
+  toastStore.show(msg)
 }
 
 function onExportUrl(instanceId: string) {
