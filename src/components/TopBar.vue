@@ -4,17 +4,17 @@
     <button class="btn-action topbar-collapse" @click="emit('toggle-browse')">Browse ▾</button>
     <button
       class="btn-action"
-      :class="!undoStore.canUndo ? 'opacity-40 cursor-not-allowed' : ''"
-      :disabled="!undoStore.canUndo"
+      :class="!historyStore.canUndo ? 'opacity-40 cursor-not-allowed' : ''"
+      :disabled="!historyStore.canUndo"
       title="Undo (⌘Z)"
-      @click="undoStore.undo()"
+      @click="() => { const r = historyStore.undo(recipesStore.snapshotInstances()); if (r.ok) recipesStore.restoreInstances(r.state as Parameters<typeof recipesStore.restoreInstances>[0]) }"
     >↶</button>
     <button
       class="btn-action"
-      :class="!undoStore.canRedo ? 'opacity-40 cursor-not-allowed' : ''"
-      :disabled="!undoStore.canRedo"
+      :class="!historyStore.canRedo ? 'opacity-40 cursor-not-allowed' : ''"
+      :disabled="!historyStore.canRedo"
       title="Redo (⌘⇧Z)"
-      @click="undoStore.redo()"
+      @click="() => { const r = historyStore.redo(recipesStore.snapshotInstances()); if (r.ok) recipesStore.restoreInstances(r.state as Parameters<typeof recipesStore.restoreInstances>[0]) }"
     >↷</button>
     <ElementTypePicker label="+ Element ▾" @select="addElement" />
     <span
@@ -66,7 +66,7 @@ import GraphModal from './GraphModal.vue'
 import ElementTypePicker from './ElementTypePicker.vue'
 import { useConfigStore } from '../stores/config'
 import { useRecipesStore } from '../stores/recipes'
-import { useUndoStore } from '../stores/undo'
+import { useHistoryStore } from '../stores/history'
 import type { ElementType } from '../recipes/types'
 import { emptyElement } from '../recipes/empty-element'
 
@@ -77,7 +77,7 @@ const emit = defineEmits<{
 
 const configStore = useConfigStore()
 const recipesStore = useRecipesStore()
-const undoStore = useUndoStore()
+const historyStore = useHistoryStore()
 
 const shareOpen = ref(false)
 const importOpen = ref(false)

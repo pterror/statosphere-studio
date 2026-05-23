@@ -6,7 +6,7 @@ import { materializeInstances, localsFromTemplate, instanceLocals } from '../rec
 import { rewriteIdentifiers } from '../recipes/rewrite-refs'
 import { getRecipe, registerRecipe, unregisterRecipe } from '../recipes/registry'
 import { useSettingsStore } from './settings'
-import { useUndoStore } from './undo'
+import { useHistoryStore } from './history'
 import { useToastStore } from './toast'
 
 const STORAGE_KEY = 'statosphere-studio-recipes-v2'
@@ -89,7 +89,6 @@ export const useRecipesStore = defineStore('recipes', () => {
   const paramDebounceSnapshots = new Map<string, RecipeInstance[]>()
 
   function scheduleParamSnapshot(instanceId: string, label: string): void {
-    const undoStore = useUndoStore()
     if (!paramDebounceSnapshots.has(instanceId)) {
       paramDebounceSnapshots.set(instanceId, snapshotInstances())
     }
@@ -101,11 +100,7 @@ export const useRecipesStore = defineStore('recipes', () => {
       const before = paramDebounceSnapshots.get(instanceId)!
       paramDebounceSnapshots.delete(instanceId)
       const after = snapshotInstances()
-      undoStore.push({
-        label,
-        do: () => { restoreInstances(after) },
-        undo: () => { restoreInstances(before) },
-      })
+      useHistoryStore().commit(before, after, label)
     }, 500)
     paramDebounceTimers.set(instanceId, timer)
   }
@@ -134,11 +129,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     }
     persist()
     const after = snapshotInstances()
-    useUndoStore().push({
-      label: `Add "${recipe.name}"`,
-      do: () => { restoreInstances(after) },
-      undo: () => { restoreInstances(before) },
-    })
+    useHistoryStore().commit(before, after, `Add "${recipe.name}"`)
     return id
   }
 
@@ -151,11 +142,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     instances.value.splice(clampedIndex, 0, inst)
     persist()
     const after = snapshotInstances()
-    useUndoStore().push({
-      label: `Reorder "${inst.name}"`,
-      do: () => { restoreInstances(after) },
-      undo: () => { restoreInstances(before) },
-    })
+    useHistoryStore().commit(before, after, `Reorder "${inst.name}"`)
   }
 
   function addComposedRefToInstance(instanceId: string, refIdPath: string, ref: import('../recipes/types').ComposedRef): void {
@@ -167,11 +154,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     inst.instanceRefs[refIdPath].push(ref)
     persist()
     const after = snapshotInstances()
-    useUndoStore().push({
-      label: `Add atom to "${inst.name}"`,
-      do: () => { restoreInstances(after) },
-      undo: () => { restoreInstances(before) },
-    })
+    useHistoryStore().commit(before, after, `Add atom to "${inst.name}"`)
   }
 
   function moveElement(
@@ -272,11 +255,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     tgtInst.extrasByPath[targetPath][elementType].push(rewrittenElement)
     persist()
     const after = snapshotInstances()
-    useUndoStore().push({
-      label: `Move element "${elementName}"`,
-      do: () => { restoreInstances(after) },
-      undo: () => { restoreInstances(before) },
-    })
+    useHistoryStore().commit(before, after, `Move element "${elementName}"`)
 
     // ── Toast ────────────────────────────────────────────────────────────────
     let msg = `Moved "${elementName}"`
@@ -303,15 +282,14 @@ export const useRecipesStore = defineStore('recipes', () => {
     if (focusedInstanceId.value === id) focusedInstanceId.value = null
     persist()
     const after = snapshotInstances()
-    const undoStore = useUndoStore()
-    undoStore.push({
-      label: `Remove "${name}"`,
-      do: () => { restoreInstances(after) },
-      undo: () => { restoreInstances(before) },
-    })
+    useHistoryStore().commit(before, after, `Remove "${name}"`)
     useToastStore().show(`Removed "${name}"`, {
       durationMs: 8000,
-      action: { label: 'Undo', onClick: () => undoStore.undo() },
+      action: { label: 'Undo', onClick: () => {
+        const historyStore = useHistoryStore()
+        const result = historyStore.undo(snapshotInstances())
+        if (result.ok) restoreInstances(result.state as typeof instances.value)
+      } },
     })
   }
 
@@ -360,11 +338,7 @@ export const useRecipesStore = defineStore('recipes', () => {
       inst.pinned.push({ elementType, elementName, override: structuredClone(el) })
       persist()
       const after = snapshotInstances()
-      useUndoStore().push({
-        label: `Pin element "${elementName}"`,
-        do: () => { restoreInstances(after) },
-        undo: () => { restoreInstances(before) },
-      })
+      useHistoryStore().commit(before, after, `Pin element "${elementName}"`)
     }
   }
 
@@ -377,15 +351,14 @@ export const useRecipesStore = defineStore('recipes', () => {
     inst.pinned.splice(idx, 1)
     persist()
     const after = snapshotInstances()
-    const undoStore = useUndoStore()
-    undoStore.push({
-      label: `Unpin element "${elementName}"`,
-      do: () => { restoreInstances(after) },
-      undo: () => { restoreInstances(before) },
-    })
+    useHistoryStore().commit(before, after, `Unpin element "${elementName}"`)
     useToastStore().show(`Removed element "${elementName}"`, {
       durationMs: 8000,
-      action: { label: 'Undo', onClick: () => undoStore.undo() },
+      action: { label: 'Undo', onClick: () => {
+        const historyStore = useHistoryStore()
+        const result = historyStore.undo(snapshotInstances())
+        if (result.ok) restoreInstances(result.state as typeof instances.value)
+      } },
     })
   }
 
@@ -419,11 +392,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     }
     persist()
     const after = snapshotInstances()
-    useUndoStore().push({
-      label: `Clear child param "${key}"`,
-      do: () => { restoreInstances(after) },
-      undo: () => { restoreInstances(before) },
-    })
+    useHistoryStore().commit(before, after, `Clear child param "${key}"`)
   }
 
   function reorderElement(instanceId: string, extrasPath: string, elementType: ElementType, fromIndex: number, toIndex: number): void {
@@ -440,11 +409,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     arr.splice(clamped, 0, el)
     persist()
     const after = snapshotInstances()
-    useUndoStore().push({
-      label: `Reorder element in "${inst.name}"`,
-      do: () => { restoreInstances(after) },
-      undo: () => { restoreInstances(before) },
-    })
+    useHistoryStore().commit(before, after, `Reorder element in "${inst.name}"`)
   }
 
   function addExtra(instanceId: string, extrasPath: string, elementType: ElementType, element: AnyElement): void {
@@ -456,11 +421,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     inst.extrasByPath[extrasPath][elementType].push(element)
     persist()
     const after = snapshotInstances()
-    useUndoStore().push({
-      label: `Add element to "${inst.name}"`,
-      do: () => { restoreInstances(after) },
-      undo: () => { restoreInstances(before) },
-    })
+    useHistoryStore().commit(before, after, `Add element to "${inst.name}"`)
   }
 
   function mergeFrom(importedInstances: RecipeInstance[], importedLibrary: RecipeDef[]): void {
@@ -521,6 +482,8 @@ export const useRecipesStore = defineStore('recipes', () => {
     customLibrary,
     materialized,
     focusedInstanceId,
+    snapshotInstances,
+    restoreInstances,
     addInstance,
     reorderInstance,
     reorderElement,

@@ -49,7 +49,7 @@ import { useConfigStore } from '../stores/config'
 import { useRecipesStore } from '../stores/recipes'
 import { useLintsStore } from '../stores/lints'
 import { useSettingsStore } from '../stores/settings'
-import { useUndoStore } from '../stores/undo'
+import { useHistoryStore } from '../stores/history'
 import { registerRecipe } from '../recipes/registry'
 import { useShortcuts } from '../composables/use-shortcuts'
 
@@ -125,13 +125,22 @@ onMounted(() => {
   const recipesStore = useRecipesStore()
   const lintsStore = useLintsStore()
   const settingsStore = useSettingsStore()
-  const undoStore = useUndoStore()
+  const historyStore = useHistoryStore()
+
+  // Init history tree; pass initial instances snapshot as the root state reference.
+  historyStore.init(recipesStore.snapshotInstances())
+
+  function applyHistoryState(result: { ok: boolean; state: unknown }): void {
+    if (result.ok) {
+      recipesStore.restoreInstances(result.state as Parameters<typeof recipesStore.restoreInstances>[0])
+    }
+  }
 
   teardownShortcuts = useShortcuts({
-    'meta+z': () => undoStore.undo(),
-    'ctrl+z': () => undoStore.undo(),
-    'meta+shift+z': () => undoStore.redo(),
-    'ctrl+shift+z': () => undoStore.redo(),
+    'meta+z': () => applyHistoryState(historyStore.undo(recipesStore.snapshotInstances())),
+    'ctrl+z': () => applyHistoryState(historyStore.undo(recipesStore.snapshotInstances())),
+    'meta+shift+z': () => applyHistoryState(historyStore.redo(recipesStore.snapshotInstances())),
+    'ctrl+shift+z': () => applyHistoryState(historyStore.redo(recipesStore.snapshotInstances())),
   })
 
   applyTheme(settingsStore.theme)

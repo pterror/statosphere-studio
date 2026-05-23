@@ -159,7 +159,7 @@ import { useSettingsStore } from '../stores/settings'
 import { useDraftsStore } from '../stores/drafts'
 import { useRecipesStore } from '../stores/recipes'
 import { useToastStore } from '../stores/toast'
-import { useUndoStore } from '../stores/undo'
+import { useHistoryStore } from '../stores/history'
 import ConfirmPopover from './ConfirmPopover.vue'
 import type { RecipeInstance, RecipeDef } from '../recipes/types'
 import type { DraftSlot } from '../stores/drafts'
@@ -170,7 +170,7 @@ const settings = useSettingsStore()
 const draftsStore = useDraftsStore()
 const recipesStore = useRecipesStore()
 const toastStore = useToastStore()
-const undoStore = useUndoStore()
+const historyStore = useHistoryStore()
 
 const newPrefix = ref('')
 const resetBtn = ref<HTMLElement | null>(null)
@@ -242,17 +242,9 @@ function onFileChange(e: Event) {
   reader.readAsText(file)
 }
 
-function snapshotForUndo() {
-  const snapInstances = structuredClone(recipesStore.instances) as RecipeInstance[]
-  const snapLibrary = structuredClone(recipesStore.customLibrary) as RecipeDef[]
-  const snapDrafts = structuredClone(draftsStore.list) as DraftSlot[]
-  const snapSettings = settings.export()
-  return { snapInstances, snapLibrary, snapDrafts, snapSettings }
-}
-
 function applyMerge() {
   if (!pendingBundle) return
-  const snap = snapshotForUndo()
+  const before = recipesStore.snapshotInstances()
   const bundle = pendingBundle
   pendingBundle = null
 
@@ -260,20 +252,7 @@ function applyMerge() {
   draftsStore.mergeSlots(bundle.drafts)
   settings.importSettings(bundle.settings)
 
-  undoStore.push({
-    label: 'Imported bundle',
-    do: () => {
-      recipesStore.mergeFrom(bundle.recipes, bundle.customLibrary)
-      draftsStore.mergeSlots(bundle.drafts)
-      settings.importSettings(bundle.settings)
-    },
-    undo: () => {
-      recipesStore.replaceFrom(snap.snapInstances, snap.snapLibrary)
-      draftsStore.replaceSlots(snap.snapDrafts)
-      settings.importSettings(snap.snapSettings)
-    },
-  })
-
+  historyStore.commit(before, recipesStore.snapshotInstances(), 'Imported bundle')
   toastStore.show('Imported studio bundle (merged).')
 }
 
@@ -284,7 +263,7 @@ function startReplace() {
 
 function applyReplace() {
   if (!pendingBundle) return
-  const snap = snapshotForUndo()
+  const before = recipesStore.snapshotInstances()
   const bundle = pendingBundle
   pendingBundle = null
 
@@ -292,20 +271,7 @@ function applyReplace() {
   draftsStore.replaceSlots(bundle.drafts)
   settings.importSettings(bundle.settings)
 
-  undoStore.push({
-    label: 'Imported bundle (replaced)',
-    do: () => {
-      recipesStore.replaceFrom(bundle.recipes, bundle.customLibrary)
-      draftsStore.replaceSlots(bundle.drafts)
-      settings.importSettings(bundle.settings)
-    },
-    undo: () => {
-      recipesStore.replaceFrom(snap.snapInstances, snap.snapLibrary)
-      draftsStore.replaceSlots(snap.snapDrafts)
-      settings.importSettings(snap.snapSettings)
-    },
-  })
-
+  historyStore.commit(before, recipesStore.snapshotInstances(), 'Imported bundle (replaced)')
   toastStore.show('Imported studio bundle (replaced).')
 }
 </script>

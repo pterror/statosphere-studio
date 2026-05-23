@@ -27,4 +27,10 @@ RUN bun run scripts/check-recipe-roundtrip.ts
 echo "Running check-lints..."
 RUN bun run scripts/check-lints.ts
 
+echo "Running check-json-patch..."
+RUN bun run scripts/check-json-patch.ts
+
+echo "Running check-history-tree..."
+RUN bun run scripts/check-history-tree.ts
+
 echo "Pre-commit checks passed!"
