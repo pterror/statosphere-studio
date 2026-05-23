@@ -340,8 +340,7 @@ const layout = computed(() => {
 })
 
 function jumpTo(node: GNode) {
-  // Close modal and attempt to scroll to the element drawer for this instance/elementType
-  // We dispatch a custom event; StreamCanvas/ElementDrawer can listen if needed
+  // Close modal and attempt to scroll to the element row for this instance/elementType
   const event = new CustomEvent('studio:jump-to-element', {
     bubbles: true,
     detail: { instanceId: node.instanceId, elementType: node.elementType, elementName: node.label },

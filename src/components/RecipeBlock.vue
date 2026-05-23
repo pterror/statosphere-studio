@@ -84,22 +84,16 @@
           @click.stop="toggleMenu"
           title="More options"
         >⋯</button>
-        <Teleport to="body">
-          <div
-            v-if="menuOpen"
-            ref="menuRef"
-            :style="menuStyle"
-            class="fixed z-50 glass-panel py-1 min-w-[160px]" style="border-radius: 10px"
-            @keydown="onMenuKeydown"
-          >
-            <button class="block w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-hover)]" style="color: var(--text-secondary)" @click="onRename">Rename</button>
-            <button class="block w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-hover)]" style="color: var(--text-secondary)" @click="onDuplicate">Duplicate</button>
-            <button class="block w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-hover)]" style="color: var(--text-secondary)" @click="onPromote">Promote to recipe…</button>
-            <button class="block w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-hover)]" style="color: var(--text-secondary)" @click="onExportUrl">Export as URL</button>
+        <Popover v-model:open="menuOpen" :anchor="menuTriggerRef" placement="below-right" :roving="true">
+          <div class="glass-panel py-1 min-w-[160px]" style="border-radius: 10px">
+            <button role="menuitem" class="block w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-hover)]" style="color: var(--text-secondary)" @click="onRename">Rename</button>
+            <button role="menuitem" class="block w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-hover)]" style="color: var(--text-secondary)" @click="onDuplicate">Duplicate</button>
+            <button role="menuitem" class="block w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-hover)]" style="color: var(--text-secondary)" @click="onPromote">Promote to recipe…</button>
+            <button role="menuitem" class="block w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-hover)]" style="color: var(--text-secondary)" @click="onExportUrl">Export as URL</button>
             <div class="my-1" style="border-top: 1px solid var(--glass-border)" />
-            <button class="block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-[var(--glass-bg-hover)]" @click="onRemove">Remove</button>
+            <button role="menuitem" class="block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-[var(--glass-bg-hover)]" @click="onRemove">Remove</button>
           </div>
-        </Teleport>
+        </Popover>
       </div>
     </div>
 
@@ -178,7 +172,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onUnmounted } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import type { RecipeInstance, ElementType, ComposedRef } from '../recipes/types'
 import { getRecipe } from '../recipes/registry'
 import { materializeInstances } from '../recipes/materialize'
@@ -187,7 +181,8 @@ import ElementRow from './ElementRow.vue'
 import ElementTypePicker from './ElementTypePicker.vue'
 import PromoteRecipeDialog from './PromoteRecipeDialog.vue'
 import ComposedChildBlock from './ComposedChildBlock.vue'
-import { makeDragSource, makeDropTarget, currentDrag } from '../composables/use-dnd'
+import Popover from './Popover.vue'
+import { makeDragSource, makeDropTarget } from '../composables/use-dnd'
 import { useSettingsStore } from '../stores/settings'
 
 const props = defineProps<{ instance: RecipeInstance }>()
@@ -233,8 +228,6 @@ const bodyDrop = makeDropTarget({
 const menuOpen = ref(false)
 const promoteOpen = ref(false)
 const menuTriggerRef = ref<HTMLButtonElement | null>(null)
-const menuRef = ref<HTMLElement | null>(null)
-const menuStyle = ref<Record<string, string>>({})
 
 const ELEMENT_TYPES: ElementType[] = ['variables', 'classifiers', 'generators', 'contentRules', 'functions']
 
@@ -310,52 +303,12 @@ function onBlockMousedown() {
 // Block menu logic
 function closeMenu() {
   menuOpen.value = false
-  removeGlobalListeners()
 }
 
 function toggleMenu(e: MouseEvent) {
   e.stopPropagation()
-  if (menuOpen.value) { closeMenu(); return }
-  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-  menuStyle.value = { top: `${rect.bottom + 4}px`, right: `${window.innerWidth - rect.right}px` }
-  menuOpen.value = true
-  nextTick(() => {
-    const first = menuRef.value?.querySelector('button') as HTMLElement | null
-    first?.focus()
-    addGlobalListeners()
-  })
+  menuOpen.value = !menuOpen.value
 }
-
-function onMenuKeydown(e: KeyboardEvent) {
-  const items = Array.from(menuRef.value?.querySelectorAll('button') ?? []) as HTMLElement[]
-  const idx = items.indexOf(document.activeElement as HTMLElement)
-  if (e.key === 'ArrowDown') { e.preventDefault(); items[(idx + 1) % items.length]?.focus() }
-  else if (e.key === 'ArrowUp') { e.preventDefault(); items[(idx - 1 + items.length) % items.length]?.focus() }
-  else if (e.key === 'Escape') { closeMenu(); menuTriggerRef.value?.focus() }
-}
-
-function onGlobalMousedown(e: MouseEvent) {
-  const target = e.target as Node
-  if (!menuRef.value?.contains(target) && !menuTriggerRef.value?.contains(target)) closeMenu()
-}
-
-function onGlobalKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') closeMenu()
-}
-
-function addGlobalListeners() {
-  document.addEventListener('mousedown', onGlobalMousedown, true)
-  document.addEventListener('keydown', onGlobalKeydown, true)
-  window.addEventListener('scroll', closeMenu, true)
-}
-
-function removeGlobalListeners() {
-  document.removeEventListener('mousedown', onGlobalMousedown, true)
-  document.removeEventListener('keydown', onGlobalKeydown, true)
-  window.removeEventListener('scroll', closeMenu, true)
-}
-
-onUnmounted(removeGlobalListeners)
 
 function onRemove() { closeMenu(); emit('remove', props.instance.id) }
 function onRename() {

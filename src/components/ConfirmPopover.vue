@@ -1,12 +1,11 @@
 <template>
-  <Teleport to="body">
+  <Popover v-model:open="openProxy" :anchor="anchor" placement="below-right">
     <Transition :name="reducedMotion ? '' : 'confirm-popover'">
       <div
         v-if="open"
         ref="popoverEl"
         class="confirm-popover"
         :class="{ 'is-danger': tone === 'danger' }"
-        :style="style"
         role="dialog"
         aria-modal="true"
         @keydown.esc.stop="cancel"
@@ -26,12 +25,13 @@
         </div>
       </div>
     </Transition>
-  </Teleport>
+  </Popover>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useSettingsStore } from '../stores/settings'
+import Popover from './Popover.vue'
 
 const props = withDefaults(defineProps<{
   anchor: HTMLElement | null
@@ -58,64 +58,19 @@ const reducedMotion = computed(() => settings.reducedMotion)
 
 const popoverEl = ref<HTMLElement | null>(null)
 const confirmBtn = ref<HTMLElement | null>(null)
-const pos = ref({ top: 0, left: 0 })
 
-const POPOVER_WIDTH = 260
-
-function reposition() {
-  if (!props.anchor) return
-  const rect = props.anchor.getBoundingClientRect()
-  const popoverHeight = popoverEl.value?.offsetHeight ?? 100
-  const spaceBelow = window.innerHeight - rect.bottom
-  const top = spaceBelow >= popoverHeight + 4
-    ? rect.bottom + 4
-    : rect.top - popoverHeight - 4
-  const left = Math.min(rect.right - POPOVER_WIDTH, window.innerWidth - POPOVER_WIDTH - 8)
-  pos.value = { top: Math.max(8, top), left: Math.max(8, left) }
-}
-
-const style = computed(() => ({
-  position: 'fixed' as const,
-  top: `${pos.value.top}px`,
-  left: `${pos.value.left}px`,
-  width: `${POPOVER_WIDTH}px`,
-  zIndex: 9999,
-}))
-
-function onScroll() {
-  if (props.open) emit('update:open', false)
-}
-
-function onResize() {
-  if (props.open) reposition()
-}
-
-function onClickOutside(e: MouseEvent) {
-  if (!props.open) return
-  if (popoverEl.value && !popoverEl.value.contains(e.target as Node)) {
-    cancel()
-  }
-}
+// Popover primitive handles open/close; we just relay
+const openProxy = computed({
+  get: () => props.open,
+  set: (v) => emit('update:open', v),
+})
 
 watch(() => props.open, async (v) => {
   if (v) {
     await nextTick()
-    reposition()
     await nextTick()
     confirmBtn.value?.focus()
   }
-})
-
-onMounted(() => {
-  window.addEventListener('resize', onResize)
-  window.addEventListener('scroll', onScroll, { capture: true, passive: true })
-  document.addEventListener('mousedown', onClickOutside)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('resize', onResize)
-  window.removeEventListener('scroll', onScroll, { capture: true })
-  document.removeEventListener('mousedown', onClickOutside)
 })
 
 function confirm() {
@@ -132,6 +87,7 @@ function cancel() {
 <style scoped>
 .confirm-popover {
   @apply rounded-lg p-3;
+  width: 260px;
   background: var(--glass-bg-strong);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);

@@ -63,6 +63,13 @@ body {
   box-shadow: 0 1px 0 var(--glass-border-light) inset;
 }
 
+.glass-row {
+  transition: background 120ms ease-out;
+}
+.glass-row:hover {
+  background: var(--glass-bg-hover);
+}
+
 .glass-button {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);

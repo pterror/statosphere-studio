@@ -5,34 +5,28 @@
       class="btn-action"
       @click.stop="toggle"
     >{{ label }}</button>
-    <Teleport to="body">
-      <div
-        v-if="open"
-        ref="popoverRef"
-        :style="popoverStyle"
-        class="fixed z-50 glass-panel py-1 min-w-[170px]" style="border-radius: 10px"
-        @keydown="onKeydown"
-      >
+    <Popover v-model:open="open" :anchor="triggerRef" placement="below-left" :roving="true">
+      <div class="glass-panel py-1 min-w-[170px]" style="border-radius: 10px">
         <button
           v-for="item in ITEMS"
           :key="item.kind"
-          class="flex items-center justify-between w-full text-left px-4 py-2 text-sm transition-colors"
+          role="menuitem"
+          class="glass-row flex items-center justify-between w-full text-left px-4 py-2 text-sm transition-colors"
           style="color: var(--text-secondary)"
-          @mouseenter="($event.currentTarget as HTMLElement).style.background = 'var(--glass-bg-hover)'"
-          @mouseleave="($event.currentTarget as HTMLElement).style.background = ''"
           @click="select(item.kind)"
         >
           <span>{{ item.label }}</span>
           <kbd class="text-xs text-gray-600 font-mono">{{ item.key }}</kbd>
         </button>
       </div>
-    </Teleport>
+    </Popover>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, onUnmounted } from 'vue'
+import { ref } from 'vue'
 import type { ElementType } from '../recipes/types'
+import Popover from './Popover.vue'
 
 const ITEMS: { kind: ElementType; label: string; key: string }[] = [
   { kind: 'variables', label: 'Variable', key: 'V' },
@@ -47,71 +41,15 @@ const emit = defineEmits<{ select: [kind: ElementType] }>()
 
 const open = ref(false)
 const triggerRef = ref<HTMLButtonElement | null>(null)
-const popoverRef = ref<HTMLElement | null>(null)
-const popoverStyle = ref<Record<string, string>>({})
 
-function toggle(e: MouseEvent) {
-  if (open.value) {
-    close()
-    return
-  }
-  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-  popoverStyle.value = {
-    top: `${rect.bottom + 4}px`,
-    left: `${rect.left}px`,
-  }
-  open.value = true
-  nextTick(() => {
-    addGlobalListeners()
-    ;(popoverRef.value?.querySelector('button') as HTMLElement | null)?.focus()
-  })
-}
-
-function close() {
-  open.value = false
-  removeGlobalListeners()
+function toggle() {
+  open.value = !open.value
 }
 
 function select(kind: ElementType) {
-  close()
+  open.value = false
   emit('select', kind)
 }
-
-function onKeydown(e: KeyboardEvent) {
-  const items = Array.from(popoverRef.value?.querySelectorAll('button') ?? []) as HTMLElement[]
-  const idx = items.indexOf(document.activeElement as HTMLElement)
-  if (e.key === 'ArrowDown') { e.preventDefault(); items[(idx + 1) % items.length]?.focus() }
-  else if (e.key === 'ArrowUp') { e.preventDefault(); items[(idx - 1 + items.length) % items.length]?.focus() }
-  else if (e.key === 'Escape') { close(); triggerRef.value?.focus() }
-  else {
-    const match = ITEMS.find(i => i.key === e.key.toUpperCase())
-    if (match) { e.preventDefault(); select(match.kind) }
-  }
-}
-
-function onGlobalMousedown(e: MouseEvent) {
-  const target = e.target as Node
-  if (!popoverRef.value?.contains(target) && !triggerRef.value?.contains(target)) close()
-}
-
-function onGlobalKeydown(e: KeyboardEvent) {
-  if (!open.value) return
-  const match = ITEMS.find(i => i.key === e.key.toUpperCase())
-  if (match && document.activeElement === document.body) { e.preventDefault(); select(match.kind) }
-  if (e.key === 'Escape') close()
-}
-
-function addGlobalListeners() {
-  document.addEventListener('mousedown', onGlobalMousedown, true)
-  document.addEventListener('keydown', onGlobalKeydown, true)
-}
-
-function removeGlobalListeners() {
-  document.removeEventListener('mousedown', onGlobalMousedown, true)
-  document.removeEventListener('keydown', onGlobalKeydown, true)
-}
-
-onUnmounted(removeGlobalListeners)
 </script>
 
 <style scoped>

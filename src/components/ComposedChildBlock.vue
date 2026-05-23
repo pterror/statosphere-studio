@@ -7,10 +7,7 @@
   <div v-else class="glass-panel-soft pl-4 ml-2" style="border-left: 2px solid var(--glass-border)">
     <!-- Child header -->
     <div
-      class="flex items-center gap-2 px-3 py-1.5 cursor-pointer rounded"
-      style="transition: background 120ms ease-out"
-      @mouseenter="($event.currentTarget as HTMLElement).style.background = 'var(--glass-bg-hover)'"
-      @mouseleave="($event.currentTarget as HTMLElement).style.background = ''"
+      class="glass-row flex items-center gap-2 px-3 py-1.5 cursor-pointer rounded"
       @click="collapsed = !collapsed"
     >
       <span class="text-xs text-gray-400 font-medium">{{ childDef?.name ?? refDef.refId }}</span>
