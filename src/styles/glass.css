@@ -119,6 +119,17 @@ body {
   pointer-events: none;
 }
 
+/* Lint jump highlight — triggered by data-highlight attribute via TopBar jumpToLint */
+[data-highlight] {
+  animation: lint-highlight 1.2s ease forwards;
+}
+
+@keyframes lint-highlight {
+  0%   { background-color: rgba(251, 191, 36, 0.28); }
+  60%  { background-color: rgba(251, 191, 36, 0.14); }
+  100% { background-color: transparent; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;

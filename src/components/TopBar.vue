@@ -17,11 +17,47 @@
       @click="() => { const r = historyStore.redo(recipesStore.snapshotInstances()); if (r.ok) recipesStore.restoreInstances(r.state as Parameters<typeof recipesStore.restoreInstances>[0]) }"
     >↷</button>
     <ElementTypePicker label="+ Element ▾" @select="addElement" />
-    <span
+    <!-- Validity dot with count badge -->
+    <button
+      ref="validityDotRef"
+      class="validity-dot-btn relative shrink-0"
       :title="validityTitle"
-      class="w-2 h-2 rounded-full shrink-0"
-      :class="hasErrors ? 'bg-red-500' : 'bg-green-500'"
-    />
+      :aria-label="validityTitle"
+      @click="lintPopoverOpen = !lintPopoverOpen"
+      @mouseenter="lintPopoverOpen = true"
+      @mouseleave="lintPopoverOpen = false"
+    >
+      <span
+        class="w-2 h-2 rounded-full block"
+        :class="hasErrors ? 'bg-red-500' : 'bg-green-500'"
+      />
+      <span
+        v-if="lintCount > 0"
+        class="lint-badge"
+      >{{ lintCount > 9 ? '9+' : lintCount }}</span>
+    </button>
+    <Popover
+      :open="lintPopoverOpen"
+      :anchor="validityDotRef"
+      placement="below-left"
+      @update:open="lintPopoverOpen = $event"
+    >
+      <div class="glass-panel py-2 min-w-[260px] max-w-[360px]" style="border-radius: 10px">
+        <div v-if="lintsStore.results.length === 0" class="px-4 py-2 text-xs" style="color: var(--text-muted)">
+          No lint warnings — config looks good.
+        </div>
+        <button
+          v-for="lint in lintsStore.results"
+          :key="lint.id + lint.section + lint.elementIndex + (lint.field ?? '')"
+          class="block w-full text-left px-4 py-2 text-xs hover:bg-[var(--glass-bg-hover)] cursor-pointer"
+          :class="lint.severity === 'warn' ? 'text-yellow-300' : 'text-blue-300'"
+          @click="jumpToLint(lint)"
+        >
+          <span class="inline-block w-1.5 h-1.5 rounded-full mr-2 align-middle" :class="lint.severity === 'warn' ? 'bg-yellow-400' : 'bg-blue-400'" />
+          {{ lint.message }}
+        </button>
+      </div>
+    </Popover>
     <DropdownMenuRoot>
       <DropdownMenuTrigger as-child>
         <button class="btn-action">⋯</button>
@@ -65,9 +101,12 @@ import SaveMenu from './SaveMenu.vue'
 import SettingsModal from './SettingsModal.vue'
 import GraphModal from './GraphModal.vue'
 import ElementTypePicker from './ElementTypePicker.vue'
+import Popover from './Popover.vue'
 import { useConfigStore } from '../stores/config'
 import { useRecipesStore } from '../stores/recipes'
 import { useHistoryStore } from '../stores/history'
+import { useLintsStore } from '../stores/lints'
+import type { LintResult } from '../stores/lints'
 import type { ElementType } from '../recipes/types'
 import { emptyElement } from '../recipes/empty-element'
 
@@ -80,18 +119,41 @@ const emit = defineEmits<{
 const configStore = useConfigStore()
 const recipesStore = useRecipesStore()
 const historyStore = useHistoryStore()
+const lintsStore = useLintsStore()
 
 const shareOpen = ref(false)
 const importOpen = ref(false)
 const settingsOpen = ref(false)
 const graphOpen = ref(false)
+const lintPopoverOpen = ref(false)
+const validityDotRef = ref<HTMLButtonElement | null>(null)
 
 const hasErrors = computed(() => {
   const e = configStore.errors
   return [e.variables, e.functions, e.classifiers, e.generators, e.contentRules].some((arr) => arr.length > 0)
 })
 
-const validityTitle = computed(() => hasErrors.value ? 'Config has validation errors' : 'Config is valid')
+const lintCount = computed(() => lintsStore.results.length)
+
+const validityTitle = computed(() => {
+  if (hasErrors.value) return 'Config has validation errors'
+  if (lintCount.value > 0) return `${lintCount.value} lint warning${lintCount.value !== 1 ? 's' : ''}`
+  return 'Config is valid'
+})
+
+async function jumpToLint(lint: LintResult) {
+  lintPopoverOpen.value = false
+  // Find element by section + name match. LintResult carries section and elementIndex
+  // relative to the flat materialized config. Use elementIndex to find the nth element
+  // of that section type across all rendered ElementRow wrappers.
+  const rows = Array.from(document.querySelectorAll<HTMLElement>(`[data-element-section="${lint.section}"]`))
+  const target = rows[lint.elementIndex] ?? rows[0]
+  if (!target) return
+  target.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  // Brief highlight flash
+  target.setAttribute('data-highlight', '')
+  setTimeout(() => target.removeAttribute('data-highlight'), 1200)
+}
 
 async function addElement(et: ElementType) {
   let targetId = recipesStore.focusedInstanceId
@@ -194,5 +256,35 @@ onUnmounted(() => window.removeEventListener('keydown', onGlobalKeydown))
   .menu-item-narrow-only {
     display: block;
   }
+}
+
+/* Validity dot button */
+.validity-dot-btn {
+  background: none;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+.validity-dot-btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+/* Count badge — superscript on the dot */
+.lint-badge {
+  position: absolute;
+  top: -4px;
+  right: -5px;
+  background: #ca8a04;
+  color: #fff;
+  font-size: 0.55rem;
+  line-height: 1;
+  padding: 1px 3px;
+  border-radius: 999px;
+  font-weight: 700;
+  pointer-events: none;
 }
 </style>

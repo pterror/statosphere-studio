@@ -4,6 +4,7 @@ import { ref, onUnmounted } from 'vue'
 export interface ToastItem {
   id: string
   message: string
+  level?: 'info' | 'error'
   action?: { label: string; onClick: () => void }
   expiresAt: number
 }
@@ -18,11 +19,11 @@ export const useToastStore = defineStore('toast', () => {
 
   function show(
     message: string,
-    opts?: { durationMs?: number; action?: { label: string; onClick: () => void } },
+    opts?: { durationMs?: number; level?: 'info' | 'error'; action?: { label: string; onClick: () => void } },
   ): string {
     const id = crypto.randomUUID()
     const durationMs = opts?.durationMs ?? 3000
-    items.value.push({ id, message, action: opts?.action, expiresAt: Date.now() + durationMs })
+    items.value.push({ id, message, level: opts?.level, action: opts?.action, expiresAt: Date.now() + durationMs })
     return id
   }
 

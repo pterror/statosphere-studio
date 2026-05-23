@@ -13,6 +13,7 @@
           v-for="item in toastStore.items"
           :key="item.id"
           class="toast-item glass-panel flex items-center gap-3 text-sm px-4 py-2 pointer-events-auto min-w-[220px]"
+          :class="item.level === 'error' ? 'toast-item--error' : ''"
           style="color: var(--text-primary)"
         >
           <span>{{ item.message }}</span>
@@ -61,5 +62,24 @@ function onAction(item: ToastItem) {
 .toast-leave-to {
   opacity: 0;
   transform: translateY(8px);
+}
+
+.toast-item--error {
+  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(127, 29, 29, 0.85);
+}
+
+@media not (prefers-reduced-motion: reduce) {
+  .toast-item--error {
+    animation: toast-shake 0.4s ease;
+  }
+}
+
+@keyframes toast-shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-6px); }
+  40%       { transform: translateX(6px); }
+  60%       { transform: translateX(-4px); }
+  80%       { transform: translateX(4px); }
 }
 </style>

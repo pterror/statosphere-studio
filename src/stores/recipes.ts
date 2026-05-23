@@ -87,20 +87,25 @@ export const useRecipesStore = defineStore('recipes', () => {
   // Debounced param-edit snapshot (Option B for non-destructive param edits)
   const paramDebounceTimers = new Map<string, ReturnType<typeof setTimeout>>()
   const paramDebounceSnapshots = new Map<string, RecipeInstance[]>()
+  const paramPendingToast = new Map<string, string>()
 
-  function scheduleParamSnapshot(instanceId: string, label: string): void {
+  function scheduleParamSnapshot(instanceId: string, label: string, toastMsg?: string): void {
     if (!paramDebounceSnapshots.has(instanceId)) {
       paramDebounceSnapshots.set(instanceId, snapshotInstances())
     }
     if (paramDebounceTimers.has(instanceId)) {
       clearTimeout(paramDebounceTimers.get(instanceId)!)
     }
+    if (toastMsg) paramPendingToast.set(instanceId, toastMsg)
     const timer = setTimeout(() => {
       paramDebounceTimers.delete(instanceId)
       const before = paramDebounceSnapshots.get(instanceId)!
       paramDebounceSnapshots.delete(instanceId)
       const after = snapshotInstances()
       useHistoryStore().commit(before, after, label)
+      const msg = paramPendingToast.get(instanceId)
+      paramPendingToast.delete(instanceId)
+      if (msg) useToastStore().show(msg)
     }, 500)
     paramDebounceTimers.set(instanceId, timer)
   }
@@ -130,6 +135,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     persist()
     const after = snapshotInstances()
     useHistoryStore().commit(before, after, `Add "${recipe.name}"`)
+    useToastStore().show(`Added recipe: ${recipe.name}`)
     return id
   }
 
@@ -298,6 +304,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     if (inst) {
       inst.name = name
       persist()
+      useToastStore().show(`Renamed to ${name}`)
     }
   }
 
@@ -305,12 +312,14 @@ export const useRecipesStore = defineStore('recipes', () => {
     const inst = instances.value.find((i) => i.id === id)
     if (!inst) return ''
     const newId = crypto.randomUUID()
+    const copyName = inst.name + ' copy'
     instances.value.push({
       ...structuredClone(inst),
       id: newId,
-      name: inst.name + ' copy',
+      name: copyName,
     })
     persist()
+    useToastStore().show(`Duplicated ${inst.name}`)
     return newId
   }
 
@@ -319,7 +328,8 @@ export const useRecipesStore = defineStore('recipes', () => {
     if (!inst) return
     inst.params = { ...inst.params, ...params }
     persist()
-    scheduleParamSnapshot(id, `Edit params "${inst.name}"`)
+    const paramKey = Object.keys(params)[0] ?? 'param'
+    scheduleParamSnapshot(id, `Edit params "${inst.name}"`, `Updated ${inst.name}.${paramKey}`)
   }
 
   function pinElement(instanceId: string, elementType: ElementType, elementName: string): void {
@@ -339,6 +349,7 @@ export const useRecipesStore = defineStore('recipes', () => {
       persist()
       const after = snapshotInstances()
       useHistoryStore().commit(before, after, `Pin element "${elementName}"`)
+      useToastStore().show(`Pinned ${elementName}`)
     }
   }
 
@@ -352,7 +363,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     persist()
     const after = snapshotInstances()
     useHistoryStore().commit(before, after, `Unpin element "${elementName}"`)
-    useToastStore().show(`Removed element "${elementName}"`, {
+    useToastStore().show(`Unpinned ${elementName}`, {
       durationMs: 8000,
       action: { label: 'Undo', onClick: () => {
         const historyStore = useHistoryStore()
@@ -422,6 +433,8 @@ export const useRecipesStore = defineStore('recipes', () => {
     persist()
     const after = snapshotInstances()
     useHistoryStore().commit(before, after, `Add element to "${inst.name}"`)
+    const elName = (element as { name?: string; category?: string }).name ?? (element as { category?: string }).category ?? elementType
+    useToastStore().show(`Added ${elementType.replace(/s$/, '')}: ${elName}`)
   }
 
   function mergeFrom(importedInstances: RecipeInstance[], importedLibrary: RecipeDef[]): void {
