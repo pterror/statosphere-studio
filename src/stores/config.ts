@@ -188,11 +188,15 @@ export const useConfigStore = defineStore('config', () => {
     }
     const existingCustom = recipesStore.instances.find((i) => i.recipeId === 'custom')
     if (existingCustom) {
-      existingCustom.extras = extras
+      if (!existingCustom.extrasByPath) existingCustom.extrasByPath = {}
+      existingCustom.extrasByPath[''] = extras
     } else {
       const id = recipesStore.addInstance('custom')
       const inst = recipesStore.instances.find((i) => i.id === id)
-      if (inst) inst.extras = extras
+      if (inst) {
+        if (!inst.extrasByPath) inst.extrasByPath = {}
+        inst.extrasByPath[''] = extras
+      }
     }
     dirty.value = false
     validate()

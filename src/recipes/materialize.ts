@@ -290,9 +290,12 @@ export function materializeInstances(instances: RecipeInstance[], opts: Material
         const resolved = pinned !== undefined ? pinned : el
         result[et].push(resolved)
       }
-      const rewrittenExtras = rewriteRefs(inst.extras, renameMap)
-      for (const el of rewrittenExtras[et]) {
-        result[et].push(el)
+      // Merge extras from all paths in extrasByPath.
+      for (const [_path, pathExtras] of Object.entries(inst.extrasByPath ?? {})) {
+        const rewrittenExtras = rewriteRefs(pathExtras, renameMap)
+        for (const el of rewrittenExtras[et]) {
+          result[et].push(el)
+        }
       }
     }
 

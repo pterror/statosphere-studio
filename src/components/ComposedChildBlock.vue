@@ -1,16 +1,16 @@
 <template>
-  <!-- Depth guard: >2 levels show stub -->
-  <div v-if="depth >= 2" class="pl-4 py-2 text-xs ml-4" style="color: var(--text-muted); border-left: 2px solid var(--glass-border)">
-    <span title="Deep nesting view coming soon">Show sub-tree →</span>
-  </div>
-
-  <div v-else class="glass-panel-soft pl-4 ml-2" style="border-left: 2px solid var(--glass-border)">
+  <div
+    class="glass-panel-soft"
+    :class="depthClass"
+    :style="{ paddingLeft: indentPx, marginLeft: '0.5rem', borderLeft: '2px solid var(--glass-border)' }"
+  >
     <!-- Child header -->
     <div
       class="glass-row flex items-center gap-2 px-3 py-1.5 cursor-pointer rounded"
+      :class="headerSizeClass"
       @click="collapsed = !collapsed"
     >
-      <span class="text-xs text-gray-400 font-medium">{{ childDef?.name ?? refDef.refId }}</span>
+      <span class="font-medium" style="color: var(--text-secondary)">{{ childDef?.name ?? refDef.refId }}</span>
       <span class="text-xs text-gray-600">{{ refDef.refId }}</span>
 
       <!-- Child params row -->
@@ -105,6 +105,27 @@
           <div v-if="childElementCount === 0" class="px-4 py-2 text-xs" style="color: var(--text-muted)">No elements</div>
         </div>
       </template>
+
+      <!-- Extras at this child's path -->
+      <div v-if="hasPathExtras" class="divide-y" style="border-color: var(--glass-border); border-top: 1px solid var(--glass-border)">
+        <template v-for="et in ELEMENT_TYPES" :key="et">
+          <ElementRow
+            v-for="(el, i) in pathExtras[et]"
+            :key="`extra-${et}-${i}`"
+            :element-type="et"
+            :element="el"
+            :instance-id="instance.id"
+            :extras-index="i"
+            :extras-path="childRefIdPathKey"
+            @change="emit('change')"
+          />
+        </template>
+      </div>
+
+      <!-- Footer: + Add element at this child's path -->
+      <div class="px-3 py-1.5" style="border-top: 1px solid var(--glass-border)">
+        <ElementTypePicker label="+ Add element ▾" @select="addChildElement" />
+      </div>
     </div>
   </div>
 </template>
@@ -117,6 +138,7 @@ import { resolveChildParams } from '../recipes/compose'
 import { materializeInstances } from '../recipes/materialize'
 import { useRecipesStore } from '../stores/recipes'
 import ElementRow from './ElementRow.vue'
+import ElementTypePicker from './ElementTypePicker.vue'
 
 const props = defineProps<{
   refDef: ComposedRef
@@ -134,22 +156,29 @@ const ELEMENT_TYPES: ElementType[] = ['variables', 'classifiers', 'generators', 
 
 const childDef = computed(() => getRecipe(props.refDef.recipeId))
 
-const childOverridesKey = computed(() => props.refIdPath.join('.'))
+const childRefIdPathKey = computed(() => props.refIdPath.join('.'))
 
 const childOverrides = computed(
-  () => props.instance.childOverrides?.[childOverridesKey.value] ?? {},
+  () => props.instance.childOverrides?.[childRefIdPathKey.value] ?? {},
 )
 
 const resolvedParams = computed(() =>
   resolveChildParams(props.refDef, props.parentParams, childOverrides.value),
 )
 
+// Indent: min(depth * 12, 48) px, expressed as a string for inline style.
+const indentPx = computed(() => `${Math.min(props.depth * 12, 48)}px`)
+
+// Past depth 3, shrink header text slightly.
+const depthClass = computed(() => props.depth > 3 ? 'composed-child--deep' : '')
+const headerSizeClass = computed(() => props.depth > 3 ? 'text-xs' : 'text-xs')
+
 function isParentBound(key: string): boolean {
   return !(childOverrides.value && key in childOverrides.value)
 }
 
 function overrideParam(key: string, value: unknown) {
-  recipesStore.setChildOverride(props.instance.id, childOverridesKey.value, key, value)
+  recipesStore.setChildOverride(props.instance.id, childRefIdPathKey.value, key, value)
   emit('change')
 }
 
@@ -158,7 +187,7 @@ function unlinkParam(key: string) {
 }
 
 function relinkParam(key: string) {
-  recipesStore.clearChildOverride(props.instance.id, childOverridesKey.value, key)
+  recipesStore.clearChildOverride(props.instance.id, childRefIdPathKey.value, key)
   emit('change')
 }
 
@@ -168,14 +197,14 @@ const childElements = computed(() => {
   if (childDef.value.source.kind === 'composed') {
     return { variables: [], classifiers: [], generators: [], contentRules: [], functions: [] }
   }
-  // Create a synthetic instance for materialization
+  // Create a synthetic instance for materialization — no extras needed here (display only)
   const syntheticInst: RecipeInstance = {
     id: props.instance.id + '_' + props.refIdPath.join('_'),
     recipeId: props.refDef.recipeId,
     name: props.refDef.defaultName,
     params: resolvedParams.value,
     pinned: [],
-    extras: { variables: [], classifiers: [], generators: [], contentRules: [], functions: [] },
+    extrasByPath: {},
   }
   return materializeInstances([syntheticInst])
 })
@@ -183,6 +212,28 @@ const childElements = computed(() => {
 const childElementCount = computed(() =>
   ELEMENT_TYPES.reduce((s, et) => s + childElements.value[et].length, 0),
 )
+
+// Extras stored at this child's path
+const pathExtras = computed(() =>
+  props.instance.extrasByPath?.[childRefIdPathKey.value] ?? { variables: [], classifiers: [], generators: [], contentRules: [], functions: [] },
+)
+
+const hasPathExtras = computed(() =>
+  ELEMENT_TYPES.some(et => (pathExtras.value[et]?.length ?? 0) > 0),
+)
+
+function emptyElement(et: ElementType): any {
+  if (et === 'variables') return { name: 'new_var', initialValue: '0' }
+  if (et === 'classifiers') return { name: 'NewClassifier', classifications: [{ label: 'an event', threshold: 0.65, updates: [] }] }
+  if (et === 'generators') return { name: 'NewGen', type: 'Text', prompt: '""', minTokens: 5, maxTokens: 40, phase: 'On Response' }
+  if (et === 'contentRules') return { category: 'Stage Direction', condition: 'true', modification: '""' }
+  return { name: 'newFn', body: '0' }
+}
+
+function addChildElement(et: ElementType) {
+  recipesStore.addExtra(props.instance.id, childRefIdPathKey.value, et, emptyElement(et))
+  emit('change')
+}
 </script>
 
 <style scoped>
@@ -198,5 +249,9 @@ const childElementCount = computed(() =>
 .param-input:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent-soft);
+}
+/* Past depth 3: slightly reduce header font size */
+.composed-child--deep .glass-row {
+  font-size: 0.9rem;
 }
 </style>

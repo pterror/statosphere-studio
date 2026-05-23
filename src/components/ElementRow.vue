@@ -59,6 +59,7 @@ const props = defineProps<{
   instanceId?: string
   initialExpanded?: boolean
   extrasIndex?: number
+  extrasPath?: string
 }>()
 const emit = defineEmits<{ change: [] }>()
 
@@ -122,7 +123,7 @@ function onDragHandleKeydown(e: KeyboardEvent) {
   e.preventDefault()
   e.stopPropagation()
   const delta = e.key === 'ArrowUp' ? -1 : 1
-  recipesStore.reorderElement(props.instanceId, props.elementType, props.extrasIndex, props.extrasIndex + delta)
+  recipesStore.reorderElement(props.instanceId, props.extrasPath ?? '', props.elementType, props.extrasIndex, props.extrasIndex + delta)
 }
 
 defineExpose({ expand: () => { expanded.value = true } })

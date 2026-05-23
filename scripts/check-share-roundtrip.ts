@@ -21,7 +21,7 @@ const syntheticInstance: RecipeInstance = {
   name: 'HP Tracker',
   params: { maxHp: 100, damageLabels: ['hit', 'blow', 'slash'], healLabels: ['heal', 'bandage', 'potion'] },
   pinned: [],
-  extras: { variables: [], classifiers: [], generators: [], contentRules: [], functions: [] },
+  extrasByPath: { '': { variables: [], classifiers: [], generators: [], contentRules: [], functions: [] } },
 }
 
 const sidecar: StudioSidecar = {

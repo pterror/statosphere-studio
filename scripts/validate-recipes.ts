@@ -68,7 +68,7 @@ for (const def of builtins) {
         name: def.name,
         params,
         pinned: [],
-        extras: { variables: [], classifiers: [], generators: [], contentRules: [], functions: [] },
+        extrasByPath: { '': { variables: [], classifiers: [], generators: [], contentRules: [], functions: [] } },
       }
       materialized = materializeInstances([instance], { stripPrefix: true })
     }
@@ -459,6 +459,54 @@ console.log('\nSmart-rebind move test:')
     allPassed = false
   } else {
     console.log(`ok   smart-rebind move (rebound=${rebound} dangling=${dangling} slugA=${slugA} slugB=${slugB})`)
+  }
+}
+
+// ── extrasByPath nested extras test ─────────────────────────────────────────
+console.log('\nextrasByPath nested extras test:')
+
+{
+  const hpTrackerDef = builtins.find(d => d.id === 'hp-tracker')!
+  const hpParams = defaultParams(hpTrackerDef.params)
+
+  const rootExtraVar = { name: 'root_bonus', initialValue: '5', perTurnUpdate: '', postInputUpdate: '', preResponseUpdate: '', postResponseUpdate: '' }
+  const childExtraVar = { name: 'child_bonus', initialValue: '3', perTurnUpdate: '', postInputUpdate: '', preResponseUpdate: '', postResponseUpdate: '' }
+
+  const instWithPaths: RecipeInstance = {
+    id: 'extras-path-test',
+    recipeId: 'hp-tracker',
+    name: 'HP Tracker Extras Path',
+    params: hpParams,
+    pinned: [],
+    extrasByPath: {
+      '': { variables: [rootExtraVar], classifiers: [], generators: [], contentRules: [], functions: [] },
+      'hp_var': { variables: [childExtraVar], classifiers: [], generators: [], contentRules: [], functions: [] },
+    },
+  }
+
+  const extrasErrors: string[] = []
+  let extrasResult: SchemaArrays = { variables: [], classifiers: [], generators: [], contentRules: [], functions: [] }
+  try {
+    extrasResult = materializeInstances([instWithPaths])
+  } catch (e) {
+    console.error(`FAIL extrasByPath test: materializeInstances threw — ${(e as Error).message}`)
+    allPassed = false
+  }
+
+  const varNames = extrasResult.variables.map((v: any) => v?.name).filter(Boolean)
+  if (!varNames.some((n: string) => n === 'root_bonus')) {
+    extrasErrors.push(`  root-path extra "root_bonus" not found in materialized output. Got: ${varNames.join(', ')}`)
+  }
+  if (!varNames.some((n: string) => n === 'child_bonus')) {
+    extrasErrors.push(`  child-path extra "child_bonus" not found in materialized output. Got: ${varNames.join(', ')}`)
+  }
+
+  if (extrasErrors.length > 0) {
+    console.error(`FAIL extrasByPath nested extras`)
+    for (const e of extrasErrors) console.error(e)
+    allPassed = false
+  } else {
+    console.log(`ok   extrasByPath nested extras (vars: ${varNames.join(', ')})`)
   }
 }
 

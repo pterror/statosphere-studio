@@ -4,6 +4,7 @@ import { useRecipesStore } from '../stores/recipes'
 import { encodeConfig, decodeConfig } from './encode'
 import { decodeRecipe } from './recipe-encode'
 import { registerRecipe } from '../recipes/registry'
+import { migrateInstance } from '../recipes/types'
 
 export type HydrateResult =
   | { kind: 'none' }
@@ -40,7 +41,7 @@ export function hydrateFromLocation(): HydrateResult {
             recipesStore.customLibrary.push(def)
           }
         }
-        recipesStore.instances.splice(0, recipesStore.instances.length, ...decoded.sidecar.instances)
+        recipesStore.instances.splice(0, recipesStore.instances.length, ...(decoded.sidecar.instances as any[]).map(migrateInstance))
       } else {
         // Legacy plain-config payload: wrap into Custom recipe via replace()
         configStore.replace(decoded.config)

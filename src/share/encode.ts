@@ -11,7 +11,8 @@ function encodeBase64Url(bytes: Uint8Array): string {
 }
 
 function decodeBase64Url(str: string): Uint8Array {
-  const padded = str.replace(/-/g, '+').replace(/_/g, '/') + '=='.slice((str.length * 3) % 4 === 0 ? 0 : (4 - ((str.length * 3) % 4)))
+  const b64 = str.replace(/-/g, '+').replace(/_/g, '/')
+  const padded = b64 + '==='.slice(0, (4 - (b64.length % 4)) % 4)
   const binary = atob(padded)
   const bytes = new Uint8Array(binary.length)
   for (let i = 0; i < binary.length; i++) {

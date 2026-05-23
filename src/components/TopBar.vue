@@ -111,7 +111,7 @@ async function addElement(et: ElementType) {
     }
   }
   if (!targetId) return
-  recipesStore.addExtra(targetId, et, emptyElement(et))
+  recipesStore.addExtra(targetId, '', et, emptyElement(et))
   configStore.markDirty()
   await nextTick()
   const blocks = document.querySelectorAll('[data-recipe-block]')

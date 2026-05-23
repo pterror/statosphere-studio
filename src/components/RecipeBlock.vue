@@ -154,11 +154,11 @@
         </div>
       </template>
 
-      <!-- Extra elements (always shown at bottom) -->
-      <div v-if="instance.extras && hasExtras" class="divide-y" style="border-color: var(--glass-border); border-top: 1px solid var(--glass-border)">
+      <!-- Extra elements at root path (always shown at bottom) -->
+      <div v-if="hasRootExtras" class="divide-y" style="border-color: var(--glass-border); border-top: 1px solid var(--glass-border)">
         <template v-for="et in ELEMENT_TYPES" :key="et">
           <ElementRow
-            v-for="(el, i) in instance.extras[et]"
+            v-for="(el, i) in rootExtras[et]"
             :key="`extra-${et}-${i}`"
             :ref="(r) => setExtraRowRef(et, i, r)"
             :element-type="et"
@@ -280,8 +280,10 @@ const totalCount = computed(() =>
   ELEMENT_TYPES.reduce((sum, et) => sum + allElements.value[et].length, 0),
 )
 
-const hasExtras = computed(() =>
-  props.instance.extras && ELEMENT_TYPES.some(et => (props.instance.extras[et]?.length ?? 0) > 0),
+const rootExtras = computed(() => props.instance.extrasByPath?.[''] ?? { variables: [], classifiers: [], generators: [], contentRules: [], functions: [] })
+
+const hasRootExtras = computed(() =>
+  ELEMENT_TYPES.some(et => (rootExtras.value[et]?.length ?? 0) > 0),
 )
 
 const isFocused = computed(() => recipesStore.focusedInstanceId === props.instance.id)
@@ -317,11 +319,11 @@ function emptyElement(et: ElementType): any {
 
 async function addElement(et: ElementType) {
   const el = emptyElement(et)
-  recipesStore.addExtra(props.instance.id, et, el)
+  recipesStore.addExtra(props.instance.id, '', et, el)
   emit('change')
   // Auto-expand the new row and focus first field
   await nextTick()
-  const count = props.instance.extras[et].length - 1
+  const count = (props.instance.extrasByPath?.['']?.[et]?.length ?? 1) - 1
   const key = `${et}-${count}`
   const rowComp = extraRowRefs.value[key]
   rowComp?.expand()

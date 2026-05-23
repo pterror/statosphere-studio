@@ -148,7 +148,7 @@ function onBlockDrop(payload: DragPayload, index: number) {
 }
 
 function onElementDrop(sourceInstanceId: string, targetInstanceId: string, elementType: string, elementName: string) {
-  recipesStore.moveElement(sourceInstanceId, targetInstanceId, elementType as any, elementName)
+  recipesStore.moveElement(sourceInstanceId, '', targetInstanceId, '', elementType as any, elementName)
   configStore.markDirty()
 }
 

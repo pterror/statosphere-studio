@@ -71,7 +71,21 @@ export interface RecipeInstance {
   name: string
   params: Record<string, unknown>
   pinned: PinnedElement[]
-  extras: SchemaArrays
+  /** Keyed by dot-joined refIdPath; '' = instance root. */
+  extrasByPath: Record<string, SchemaArrays>
   childOverrides?: Record<string, Record<string, unknown>>
   instanceRefs?: Record<string, ComposedRef[]>
+}
+
+/** Migrate a raw stored instance: if it carries legacy `extras`, lift it into `extrasByPath`. */
+export function migrateInstance(raw: any): RecipeInstance {
+  if (raw && raw.extras && !raw.extrasByPath) {
+    const { extras, ...rest } = raw
+    return { ...rest, extrasByPath: { '': extras } } as RecipeInstance
+  }
+  if (raw && !raw.extrasByPath) {
+    const { ...rest } = raw
+    return { ...rest, extrasByPath: { '': { variables: [], classifiers: [], generators: [], contentRules: [], functions: [] } } } as RecipeInstance
+  }
+  return raw as RecipeInstance
 }

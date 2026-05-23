@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import type { RecipeInstance, RecipeDef, ElementType, SchemaArrays } from '../recipes/types'
+import { migrateInstance } from '../recipes/types'
 import { materializeInstances, localsFromTemplate, instanceLocals } from '../recipes/materialize'
 import { rewriteIdentifiers } from '../recipes/rewrite-refs'
 import { getRecipe, registerRecipe, unregisterRecipe } from '../recipes/registry'
@@ -20,7 +21,7 @@ function loadFromStorage(): RecipeInstance[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return []
-    return JSON.parse(raw) as RecipeInstance[]
+    return (JSON.parse(raw) as any[]).map(migrateInstance)
   } catch {
     return []
   }
@@ -123,7 +124,7 @@ export const useRecipesStore = defineStore('recipes', () => {
       name: recipe.name,
       params: defaults,
       pinned: [],
-      extras: emptyArrays(),
+      extrasByPath: { '': emptyArrays() },
     }
     const before = snapshotInstances()
     if (atIndex !== undefined && atIndex >= 0 && atIndex <= instances.value.length) {
@@ -175,17 +176,23 @@ export const useRecipesStore = defineStore('recipes', () => {
 
   function moveElement(
     sourceInstanceId: string,
+    sourcePath: string,
     targetInstanceId: string,
+    targetPath: string,
     elementType: ElementType,
     elementName: string,
   ): { rebound: number; dangling: number } {
-    if (sourceInstanceId === targetInstanceId) return { rebound: 0, dangling: 0 }
     const srcInst = instances.value.find((i) => i.id === sourceInstanceId)
     const tgtInst = instances.value.find((i) => i.id === targetInstanceId)
     if (!srcInst || !tgtInst) return { rebound: 0, dangling: 0 }
+
+    const isSameInstance = sourceInstanceId === targetInstanceId
+    const isSamePath = isSameInstance && sourcePath === targetPath
+    if (isSamePath) return { rebound: 0, dangling: 0 }
+
     const before = snapshotInstances()
 
-    // Determine if element is pinned or in extras
+    // Determine if element is pinned or in an extrasByPath bucket
     const pinnedIdx = srcInst.pinned.findIndex(
       (p) => p.elementType === elementType && p.elementName === elementName,
     )
@@ -195,12 +202,13 @@ export const useRecipesStore = defineStore('recipes', () => {
       elementData = JSON.parse(JSON.stringify(srcInst.pinned[pinnedIdx].override))
       srcInst.pinned.splice(pinnedIdx, 1)
     } else {
-      const extrasIdx = srcInst.extras[elementType].findIndex(
+      const srcBucket = srcInst.extrasByPath?.[sourcePath]
+      const extrasIdx = srcBucket?.[elementType].findIndex(
         (el: any) => (el?.name ?? el?.category) === elementName,
-      )
+      ) ?? -1
       if (extrasIdx !== -1) {
-        elementData = JSON.parse(JSON.stringify(srcInst.extras[elementType][extrasIdx]))
-        srcInst.extras[elementType].splice(extrasIdx, 1)
+        elementData = JSON.parse(JSON.stringify(srcBucket![elementType][extrasIdx]))
+        srcBucket![elementType].splice(extrasIdx, 1)
       } else {
         // Materialized-from-recipe but not pinned — pin first, then move
         const recipe = getRecipe(srcInst.recipeId)
@@ -218,16 +226,19 @@ export const useRecipesStore = defineStore('recipes', () => {
     if (elementData === null) return { rebound: 0, dangling: 0 }
 
     // ── Smart-rebind pass ────────────────────────────────────────────────────
+    // For intra-instance cross-path moves the slug is the same on both sides — rebind is a no-op.
     const { slug: srcSlug, locals: srcLocals } = instanceLocals(srcInst)
     const { slug: tgtSlug, locals: tgtLocals } = instanceLocals(tgtInst)
 
     // Build fromTo map: srcSlug_name → tgtSlug_name for names present on both sides.
     const fromTo: Record<string, string> = {}
-    for (const kind of ['variables', 'classifiers', 'generators', 'functions'] as const) {
-      const tgtSet = new Set(tgtLocals[kind])
-      for (const name of srcLocals[kind]) {
-        if (tgtSet.has(name)) {
-          fromTo[`${srcSlug}_${name}`] = `${tgtSlug}_${name}`
+    if (!isSameInstance) {
+      for (const kind of ['variables', 'classifiers', 'generators', 'functions'] as const) {
+        const tgtSet = new Set(tgtLocals[kind])
+        for (const name of srcLocals[kind]) {
+          if (tgtSet.has(name)) {
+            fromTo[`${srcSlug}_${name}`] = `${tgtSlug}_${name}`
+          }
         }
       }
     }
@@ -256,7 +267,9 @@ export const useRecipesStore = defineStore('recipes', () => {
     }
     const dangling = countDangling(rewrittenElement)
 
-    tgtInst.extras[elementType].push(rewrittenElement)
+    if (!tgtInst.extrasByPath) tgtInst.extrasByPath = {}
+    if (!tgtInst.extrasByPath[targetPath]) tgtInst.extrasByPath[targetPath] = emptyArrays()
+    tgtInst.extrasByPath[targetPath][elementType].push(rewrittenElement)
     persist()
     const after = snapshotInstances()
     useUndoStore().push({
@@ -413,10 +426,12 @@ export const useRecipesStore = defineStore('recipes', () => {
     })
   }
 
-  function reorderElement(instanceId: string, elementType: ElementType, fromIndex: number, toIndex: number): void {
+  function reorderElement(instanceId: string, extrasPath: string, elementType: ElementType, fromIndex: number, toIndex: number): void {
     const inst = instances.value.find((i) => i.id === instanceId)
     if (!inst) return
-    const arr = inst.extras[elementType]
+    const bucket = inst.extrasByPath?.[extrasPath]
+    if (!bucket) return
+    const arr = bucket[elementType]
     if (fromIndex < 0 || fromIndex >= arr.length) return
     const clamped = Math.max(0, Math.min(toIndex, arr.length - 1))
     if (clamped === fromIndex) return
@@ -432,11 +447,13 @@ export const useRecipesStore = defineStore('recipes', () => {
     })
   }
 
-  function addExtra(instanceId: string, elementType: ElementType, element: any): void {
+  function addExtra(instanceId: string, extrasPath: string, elementType: ElementType, element: any): void {
     const inst = instances.value.find((i) => i.id === instanceId)
     if (!inst) return
     const before = snapshotInstances()
-    inst.extras[elementType].push(element)
+    if (!inst.extrasByPath) inst.extrasByPath = {}
+    if (!inst.extrasByPath[extrasPath]) inst.extrasByPath[extrasPath] = emptyArrays()
+    inst.extrasByPath[extrasPath][elementType].push(element)
     persist()
     const after = snapshotInstances()
     useUndoStore().push({
@@ -448,7 +465,8 @@ export const useRecipesStore = defineStore('recipes', () => {
 
   function mergeFrom(importedInstances: RecipeInstance[], importedLibrary: RecipeDef[]): void {
     const existingIds = new Set(instances.value.map(i => i.id))
-    for (const inst of importedInstances) {
+    for (const raw of importedInstances as any[]) {
+      const inst = migrateInstance(raw)
       if (!existingIds.has(inst.id)) instances.value.push(inst)
     }
     persist()
@@ -463,7 +481,8 @@ export const useRecipesStore = defineStore('recipes', () => {
   }
 
   function replaceFrom(importedInstances: RecipeInstance[], importedLibrary: RecipeDef[]): void {
-    instances.value.splice(0, instances.value.length, ...importedInstances)
+    const migrated = (importedInstances as any[]).map(migrateInstance)
+    instances.value.splice(0, instances.value.length, ...migrated)
     persist()
     customLibrary.value.splice(0, customLibrary.value.length, ...importedLibrary)
     for (const def of importedLibrary) registerRecipe(def)
