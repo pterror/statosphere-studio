@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => {
   if (mode !== 'lib') {
     return {
       plugins: [vue()],
+      base: '/statosphere-studio/',
       build: {
         outDir: 'dist/spa',
       },
