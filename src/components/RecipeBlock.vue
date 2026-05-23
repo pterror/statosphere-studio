@@ -18,7 +18,27 @@
         v-bind="gripDrag"
         @click.stop
       >≡</span>
-      <span class="text-sm font-medium text-gray-100">{{ instance.name }}</span>
+      <!-- Inline rename -->
+      <input
+        v-if="isRenaming"
+        ref="renameInputRef"
+        v-model="renameValue"
+        type="text"
+        class="rename-input text-sm font-medium"
+        @keydown.enter.prevent="commitRename"
+        @keydown.esc.prevent="cancelRename"
+        @blur="commitRename"
+        @click.stop
+      />
+      <span
+        v-else
+        class="text-sm font-medium text-gray-100 cursor-text hover:text-white"
+        title="Click to rename"
+        @click.stop="beginRename"
+        tabindex="0"
+        @keydown.enter.prevent="beginRename"
+        @keydown.space.prevent="beginRename"
+      >{{ instance.name }}</span>
       <span class="text-xs text-gray-500">{{ recipeName }}</span>
 
       <!-- Params row (always visible) -->
@@ -27,23 +47,12 @@
           <div class="flex items-center gap-1">
             <span class="text-xs text-gray-600">{{ p.label }}</span>
             <!-- label-list: chip editor -->
-            <div v-if="p.kind === 'label-list'" class="flex items-center gap-1 flex-wrap">
-              <span
-                v-for="(chip, ci) in (instance.params[p.key] as string[])"
-                :key="ci"
-                class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs bg-gray-800 text-gray-300 border border-gray-700"
-              >
-                {{ chip }}
-                <button
-                  class="text-gray-500 hover:text-red-400 leading-none"
-                  @click.stop="removeChip(p.key, ci)"
-                >×</button>
-              </span>
-              <button
-                class="text-xs text-indigo-400 hover:text-indigo-300 px-1"
-                @click.stop="addChip(p.key)"
-              >+</button>
-            </div>
+            <ChipList
+              v-if="p.kind === 'label-list'"
+              :model-value="(instance.params[p.key] as string[]) ?? []"
+              @update:model-value="updateChipList(p.key, $event)"
+              @click.stop
+            />
             <!-- enum -->
             <select
               v-else-if="p.kind === 'enum'"
@@ -182,6 +191,7 @@ import ElementTypePicker from './ElementTypePicker.vue'
 import PromoteRecipeDialog from './PromoteRecipeDialog.vue'
 import ComposedChildBlock from './ComposedChildBlock.vue'
 import Popover from './Popover.vue'
+import ChipList from './widgets/ChipList.vue'
 import { makeDragSource, makeDropTarget } from '../composables/use-dnd'
 import { useSettingsStore } from '../stores/settings'
 
@@ -194,6 +204,32 @@ const settingsStore = useSettingsStore()
 const collapsed = ref(false)
 const bodyDropActive = ref(false)
 const bodyDropRejected = ref(false)
+
+// Inline rename
+const isRenaming = ref(false)
+const renameValue = ref('')
+const renameInputRef = ref<HTMLInputElement | null>(null)
+
+async function beginRename() {
+  renameValue.value = props.instance.name
+  isRenaming.value = true
+  await nextTick()
+  renameInputRef.value?.focus()
+  renameInputRef.value?.select()
+}
+
+function commitRename() {
+  if (!isRenaming.value) return
+  isRenaming.value = false
+  const val = renameValue.value.trim()
+  if (val && val !== props.instance.name) {
+    recipesStore.renameInstance(props.instance.id, val)
+  }
+}
+
+function cancelRename() {
+  isRenaming.value = false
+}
 
 const gripDrag = makeDragSource({ kind: 'block', instanceId: props.instance.id }, { ghostText: props.instance.name })
 
@@ -262,18 +298,8 @@ function updateParam(key: string, value: unknown) {
   emit('change')
 }
 
-function removeChip(key: string, idx: number) {
-  const arr = [...(props.instance.params[key] as string[])]
-  arr.splice(idx, 1)
-  updateParam(key, arr)
-}
-
-function addChip(key: string) {
-  const label = prompt('Add label:')
-  if (!label) return
-  const arr = [...((props.instance.params[key] as string[]) ?? [])]
-  arr.push(label.trim())
-  updateParam(key, arr)
+function updateChipList(key: string, chips: string[]) {
+  updateParam(key, chips)
 }
 
 function emptyElement(et: ElementType): any {
@@ -313,8 +339,7 @@ function toggleMenu(e: MouseEvent) {
 function onRemove() { closeMenu(); emit('remove', props.instance.id) }
 function onRename() {
   closeMenu()
-  const newName = prompt('Rename recipe instance:', props.instance.name)
-  if (newName?.trim()) recipesStore.renameInstance(props.instance.id, newName.trim())
+  beginRename()
 }
 function onDuplicate() { closeMenu(); recipesStore.duplicateInstance(props.instance.id) }
 function onPromote() { closeMenu(); promoteOpen.value = true }
@@ -334,5 +359,17 @@ function onExportUrl() { closeMenu(); emit('export-url', props.instance.id) }
 .param-input:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent-soft);
+}
+.rename-input {
+  @apply rounded px-1.5 py-0.5 outline-none;
+  background: rgba(0, 0, 0, 0.20);
+  border: 1px solid var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+  color: var(--text-primary);
+  min-width: 6rem;
+  max-width: 16rem;
+}
+:root[data-theme="light"] .rename-input {
+  background: rgba(255, 255, 255, 0.60);
 }
 </style>
