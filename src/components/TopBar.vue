@@ -2,7 +2,7 @@
   <header class="flex items-center gap-2 px-4 py-2 bg-gray-900 border-b border-gray-800 shrink-0">
     <span class="font-semibold text-indigo-400 mr-auto">Statosphere Studio</span>
     <button class="btn-action" @click="emit('toggle-browse')">Browse ▾</button>
-    <button class="btn-action" @click="addElement">+ Element</button>
+    <ElementTypePicker label="+ Element ▾" @select="addElement" />
     <span
       :title="validityTitle"
       class="w-2 h-2 rounded-full shrink-0"
@@ -34,7 +34,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import {
   DropdownMenuRoot,
   DropdownMenuTrigger,
@@ -47,8 +47,10 @@ import ImportDialog from './ImportDialog.vue'
 import SaveMenu from './SaveMenu.vue'
 import SettingsModal from './SettingsModal.vue'
 import GraphModal from './GraphModal.vue'
+import ElementTypePicker from './ElementTypePicker.vue'
 import { useConfigStore } from '../stores/config'
 import { useRecipesStore } from '../stores/recipes'
+import type { ElementType } from '../recipes/types'
 
 const emit = defineEmits<{
   (e: 'toggle-browse'): void
@@ -70,23 +72,35 @@ const hasErrors = computed(() => {
 
 const validityTitle = computed(() => hasErrors.value ? 'Config has validation errors' : 'Config is valid')
 
-function addElement() {
-  let customInst = recipesStore.instances.find((i) => i.recipeId === 'custom')
-  if (!customInst) {
-    recipesStore.addInstance('custom')
-    customInst = recipesStore.instances.find((i) => i.recipeId === 'custom')
+function emptyElement(et: ElementType): any {
+  if (et === 'variables') return { name: 'new_var', initialValue: '0' }
+  if (et === 'classifiers') return { name: 'NewClassifier', classifications: [{ label: 'an event', threshold: 0.65, updates: [] }] }
+  if (et === 'generators') return { name: 'NewGen', type: 'Text', prompt: '""', minTokens: 5, maxTokens: 40, phase: 'On Response' }
+  if (et === 'contentRules') return { category: 'Stage Direction', condition: 'true', modification: '""' }
+  return { name: 'newFn', body: '0' }
+}
+
+function addElement(et: ElementType) {
+  let targetId = recipesStore.focusedInstanceId
+  if (!targetId) {
+    // Find or create a custom block at bottom
+    let customInst = recipesStore.instances.slice().reverse().find((i) => i.recipeId === 'custom')
+    if (!customInst) {
+      recipesStore.addInstance('custom')
+      customInst = recipesStore.instances.slice().reverse().find((i) => i.recipeId === 'custom')
+    }
+    if (customInst) {
+      targetId = customInst.id
+      recipesStore.focusedInstanceId = customInst.id
+    }
   }
-  if (customInst) {
-    recipesStore.addExtra(customInst.id, 'variables', {
-      name: '',
-      initialValue: '',
-      perTurnUpdate: '',
-      postInputUpdate: '',
-      preResponseUpdate: '',
-      postResponseUpdate: '',
-    })
-    configStore.markDirty()
-  }
+  if (!targetId) return
+  recipesStore.addExtra(targetId, et, emptyElement(et))
+  configStore.markDirty()
+  nextTick(() => {
+    const blocks = document.querySelectorAll('[data-recipe-block]')
+    blocks[blocks.length - 1]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  })
 }
 
 async function copyJson() {

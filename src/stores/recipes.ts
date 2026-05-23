@@ -55,6 +55,7 @@ function saveLibrary(defs: RecipeDef[]): void {
 export const useRecipesStore = defineStore('recipes', () => {
   const instances = ref<RecipeInstance[]>(loadFromStorage())
   const customLibrary = ref<RecipeDef[]>(loadLibrary())
+  const focusedInstanceId = ref<string | null>(null)
 
   // Register all persisted custom recipes into the registry on startup.
   for (const def of customLibrary.value) {
@@ -94,6 +95,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     const idx = instances.value.findIndex((i) => i.id === id)
     if (idx !== -1) {
       instances.value.splice(idx, 1)
+      if (focusedInstanceId.value === id) focusedInstanceId.value = null
       persist()
     }
   }
@@ -164,6 +166,25 @@ export const useRecipesStore = defineStore('recipes', () => {
     }
   }
 
+  function setChildOverride(instanceId: string, refIdPath: string, key: string, value: unknown): void {
+    const inst = instances.value.find((i) => i.id === instanceId)
+    if (!inst) return
+    if (!inst.childOverrides) inst.childOverrides = {}
+    if (!inst.childOverrides[refIdPath]) inst.childOverrides[refIdPath] = {}
+    inst.childOverrides[refIdPath][key] = value
+    persist()
+  }
+
+  function clearChildOverride(instanceId: string, refIdPath: string, key: string): void {
+    const inst = instances.value.find((i) => i.id === instanceId)
+    if (!inst?.childOverrides?.[refIdPath]) return
+    delete inst.childOverrides[refIdPath][key]
+    if (Object.keys(inst.childOverrides[refIdPath]).length === 0) {
+      delete inst.childOverrides[refIdPath]
+    }
+    persist()
+  }
+
   function addExtra(instanceId: string, elementType: ElementType, element: any): void {
     const inst = instances.value.find((i) => i.id === instanceId)
     if (!inst) return
@@ -202,6 +223,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     instances,
     customLibrary,
     materialized,
+    focusedInstanceId,
     addInstance,
     removeInstance,
     renameInstance,
@@ -210,6 +232,8 @@ export const useRecipesStore = defineStore('recipes', () => {
     pinElement,
     unpinElement,
     updatePinnedElement,
+    setChildOverride,
+    clearChildOverride,
     addExtra,
     addCustomRecipe,
     removeCustomRecipe,
