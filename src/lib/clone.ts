@@ -1,11 +1,15 @@
+import { toRaw } from 'vue'
+
 /**
- * Deep-clone a JSON-serializable value.
+ * Deep-clone a value that may be Vue-reactive.
  *
- * JSON round-trip is used instead of structuredClone(toRaw(x)) because
- * toRaw() only strips one layer of Vue reactivity — nested reactive objects
- * remain as Proxies, which structuredClone cannot clone.  JSON.parse/stringify
- * naturally serializes through proxies and produces plain objects.
+ * structuredClone(toRaw(x)) works correctly: toRaw() returns the original
+ * target object, and Vue's reactivity system does not recursively create
+ * Proxy wrappers — it lazily wraps on access, so the underlying target and
+ * all its nested properties are plain objects.  structuredClone then clones
+ * them without issue and preserves types that JSON round-trip would lose
+ * (Map, Set, Date, etc.).
  */
 export function cloneJson<T>(x: T): T {
-  return JSON.parse(JSON.stringify(x)) as T
+  return structuredClone(toRaw(x)) as T
 }
