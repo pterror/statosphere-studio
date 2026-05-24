@@ -296,7 +296,8 @@ onMounted(() => {
 .recipe-library.inline .card-grid {
   @apply px-0;
   grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
-  max-height: calc(100vh - 280px);
+  max-height: calc(50vh - 120px);
+  min-height: 0;
 }
 
 .recipe-library.strip .card-grid {

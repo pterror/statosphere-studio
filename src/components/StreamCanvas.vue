@@ -16,16 +16,14 @@
     <!-- Empty state: inline library IS the canvas -->
     <template v-if="recipesStore.instances.length === 0">
       <div
-        class="flex flex-col flex-1 min-h-0 overflow-y-auto px-6 py-8"
+        class="flex flex-col flex-1 min-h-0 overflow-y-auto px-6 py-4"
         v-bind="fileDropTarget"
         @dragenter="onCanvasDragEnter"
         @dragleave="onCanvasFileDragLeave"
       >
-        <div class="text-center mb-6">
-          <h2 class="text-lg font-semibold text-gray-300">Add your first recipe</h2>
-          <p class="text-sm text-gray-600 mt-1">Search or browse to get started.</p>
+        <div class="w-full max-w-2xl mx-auto" style="max-height: 50vh; min-height: 0; display: flex; flex-direction: column;">
+          <RecipeLibrary display="inline" @add="addInstance" @close="() => {}" />
         </div>
-        <RecipeLibrary display="inline" @add="addInstance" @close="() => {}" />
       </div>
     </template>
 

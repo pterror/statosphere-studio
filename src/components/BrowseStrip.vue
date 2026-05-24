@@ -7,16 +7,7 @@
       @click="toggleOpen"
     >
       <span class="text-gray-300 text-sm">Browse recipes {{ isOpen ? '▾' : '▸' }}</span>
-      <div class="filter-chips-inline" @click.stop>
-        <button
-          v-for="chip in chips"
-          :key="chip.value"
-          class="chip-sm"
-          :class="{ active: activeFilter === chip.value }"
-          @click="activeFilter = chip.value"
-        >{{ chip.label }}</button>
-      </div>
-      <span class="ml-auto text-xs text-gray-600">{{ filteredCount }} of {{ totalCount }}</span>
+      <span class="ml-auto text-xs text-gray-600">{{ totalCount }} recipes</span>
     </button>
 
     <!-- Expanded library -->
@@ -36,7 +27,6 @@ import { ref, computed, watch } from 'vue'
 import RecipeLibrary from './RecipeLibrary.vue'
 import { listRecipes } from '../recipes/registry'
 import { useRecipesStore } from '../stores/recipes'
-import atoms from '../recipes/builtins/atoms/index'
 import { makeDropTarget } from '../composables/use-dnd'
 
 const emit = defineEmits<{
@@ -52,7 +42,6 @@ function loadOpen(): boolean {
 
 const isOpen = ref(loadOpen())
 const libraryRef = ref<InstanceType<typeof RecipeLibrary> | null>(null)
-const activeFilter = ref<'all' | 'atoms' | 'bundles' | 'custom'>('all')
 
 watch(isOpen, (v) => {
   if (typeof window !== 'undefined') {
@@ -60,33 +49,11 @@ watch(isOpen, (v) => {
   }
 })
 
-const chips = [
-  { label: 'All', value: 'all' as const },
-  { label: 'Atoms', value: 'atoms' as const },
-  { label: 'Bundles', value: 'bundles' as const },
-  { label: 'Custom', value: 'custom' as const },
-]
-
 const recipesStore = useRecipesStore()
-const atomIds = new Set(atoms.map((a) => a.id))
 
-function getKind(id: string) {
-  if (recipesStore.customLibrary.some((d) => d.id === id)) return 'custom'
-  if (atomIds.has(id)) return 'atom'
-  return 'bundle'
-}
-
-const allRecipes = computed(() =>
-  listRecipes().filter((r) => r.id !== 'custom'),
+const totalCount = computed(() =>
+  listRecipes().filter((r) => r.id !== 'custom').length,
 )
-
-const totalCount = computed(() => allRecipes.value.length)
-
-const filteredCount = computed(() => {
-  if (activeFilter.value === 'all') return totalCount.value
-  const kind = activeFilter.value.replace(/s$/, '')
-  return allRecipes.value.filter((r) => getKind(r.id) === kind).length
-})
 
 function toggleOpen() {
   isOpen.value = !isOpen.value
@@ -146,28 +113,6 @@ defineExpose({ open, focusSearch })
 
 .strip-bar:hover {
   background: var(--glass-bg-hover);
-}
-
-.filter-chips-inline {
-  @apply flex gap-1;
-}
-
-.chip-sm {
-  @apply px-2 py-0.5 rounded-full text-[11px] transition-colors;
-  background: var(--glass-bg-strong);
-  border: 1px solid var(--glass-border);
-  color: var(--text-muted);
-}
-
-.chip-sm:hover {
-  background: var(--glass-bg-hover);
-  color: var(--text-secondary);
-}
-
-.chip-sm.active {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  color: var(--accent);
 }
 
 .strip-body {
