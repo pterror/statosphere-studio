@@ -26,7 +26,9 @@
     "lint:eslint": "eslint src scripts --max-warnings 0",
     "lint:eslint:fix": "eslint src scripts --fix",
     "lint:style": "stylelint 'src/**/*.{css,vue}'",
-    "lint:style:fix": "stylelint 'src/**/*.{css,vue}' --fix"
+    "lint:style:fix": "stylelint 'src/**/*.{css,vue}' --fix",
+    "audit:ui": "STUDIO_AUDIT_FAST=1 bun run scripts/audit-ui.ts",
+    "audit:ui:full": "bun run scripts/audit-ui.ts"
   },
   "peerDependencies": {
     "pinia": ">=2.0.0",
@@ -44,6 +46,7 @@
     "vue": "^3.4.27"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.3",
     "@typescript-eslint/parser": "^8.59.4",
     "@vitejs/plugin-vue": "^5.0.4",
     "@vue/eslint-config-typescript": "^14.7.0",
@@ -52,6 +55,7 @@
     "eslint": "^10.4.0",
     "eslint-plugin-vue": "^10.9.1",
     "eslint-plugin-vuejs-accessibility": "^2.5.0",
+    "playwright": "^1.60.0",
     "postcss": "^8.4.38",
     "postcss-html": "^1.8.1",
     "stylelint": "^17.12.0",

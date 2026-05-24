@@ -42,4 +42,7 @@ RUN bun run scripts/check-history-tree.ts
 echo "Running check-ui-lints..."
 RUN bun run scripts/check-ui-lints.ts
 
+echo "Running audit:ui (fast mode)..."
+STUDIO_AUDIT_FAST=1 RUN bun run scripts/audit-ui.ts
+
 echo "Pre-commit checks passed!"
