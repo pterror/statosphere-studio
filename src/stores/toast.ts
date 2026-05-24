@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, onUnmounted } from 'vue'
+import { ref } from 'vue'
 
 export interface ToastItem {
   id: string

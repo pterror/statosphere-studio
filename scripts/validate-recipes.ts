@@ -180,7 +180,7 @@ for (const def of builtins) {
 
   // 2. Every updates[].variable that references a recipe-local variable uses the prefixed form.
   // (External/platform variables like 'background' are allowed through.)
-  const allPrefixedVarNames = new Set(merged.variables.map((v: any) => v?.name).filter(Boolean))
+  const _allPrefixedVarNames = new Set(merged.variables.map((v: any) => v?.name).filter(Boolean))
   const updateVars = collectUpdatesVariables(merged)
   for (const v of updateVars) {
     // Only flag if the bare name is a declared local of this recipe (should have been prefixed).

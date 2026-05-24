@@ -133,12 +133,12 @@
       <!-- Composed: nested sub-blocks -->
       <template v-if="def && def.source.kind === 'composed'">
         <div class="flex flex-col divide-y" style="--tw-divide-opacity: 1; border-color: var(--glass-border)">
-          <template v-for="ref in [...def.source.refs, ...(instance.instanceRefs?.[''] ?? [])]" :key="ref.refId">
+          <template v-for="refItem in [...def.source.refs, ...(instance.instanceRefs?.[''] ?? [])]" :key="refItem.refId">
             <ComposedChildBlock
-              :ref-def="ref"
+              :ref-def="refItem"
               :instance="instance"
               :parent-params="instance.params"
-              :ref-id-path="[ref.refId]"
+              :ref-id-path="[refItem.refId]"
               :depth="0"
               @change="emit('change')"
             />
@@ -318,7 +318,7 @@ const def = computed(() => getRecipe(props.instance.recipeId))
 const recipeName = computed(() => def.value?.name ?? props.instance.recipeId)
 const allElements = computed(() => materializeInstances([props.instance]))
 
-const totalCount = computed(() =>
+const _totalCount = computed(() =>
   ELEMENT_TYPES.reduce((sum, et) => sum + allElements.value[et].length, 0),
 )
 

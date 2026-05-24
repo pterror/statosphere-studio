@@ -248,7 +248,7 @@ export function materializeInstances(instances: RecipeInstance[], opts: Material
   }
 
   // For stripPrefix: track seen bare names per element type for collision dedup.
-  const seenBareNames: Record<ElementType, Map<string, number>> = {
+  const _seenBareNames: Record<ElementType, Map<string, number>> = {
     variables: new Map(),
     classifiers: new Map(),
     generators: new Map(),

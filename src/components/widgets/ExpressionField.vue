@@ -2,6 +2,7 @@
   <div class="flex flex-col gap-1">
     <textarea
       :value="modelValue"
+      :aria-label="ariaLabel"
       class="field-input font-mono"
       :rows="rows"
       @input="onInput"
@@ -25,6 +26,7 @@ import { useConfigStore } from '../../stores/config'
 const props = defineProps<{
   modelValue: string
   rows?: number
+  ariaLabel?: string
 }>()
 
 const emit = defineEmits<{

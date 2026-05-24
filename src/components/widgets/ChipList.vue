@@ -56,7 +56,9 @@ import { ref, nextTick, watch } from 'vue'
 const props = withDefaults(defineProps<{
   modelValue: string[]
   placeholder?: string
-}>(), {})
+}>(), {
+  placeholder: undefined,
+})
 
 const emit = defineEmits<{
   'update:modelValue': [value: string[]]

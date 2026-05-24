@@ -95,7 +95,6 @@ import RecipeLibrary from './RecipeLibrary.vue'
 import BrowseStrip from './BrowseStrip.vue'
 import { makeDropTarget, currentDrag } from '../composables/use-dnd'
 import type { DragPayload } from '../composables/use-dnd'
-import { decodeRecipe } from '../share/recipe-encode'
 
 const emit = defineEmits<{
   (e: 'open-library-modal'): void

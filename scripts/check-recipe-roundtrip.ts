@@ -47,7 +47,7 @@ try {
   encodeRecipe({ ...synthetic, source: { kind: 'builtin', materialize: () => ({ variables: [], classifiers: [], generators: [], contentRules: [], functions: [] }) } })
   console.error('FAIL: should have thrown on builtin recipe')
   process.exit(1)
-} catch (e) {
+} catch (_e) {
   // expected
 }
 

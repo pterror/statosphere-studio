@@ -144,15 +144,6 @@ const error = ref('')
 
 const ELEMENT_TYPES: ElementType[] = ['variables', 'classifiers', 'generators', 'contentRules', 'functions']
 
-// Collect all string-valued leaf fields from materialized elements.
-interface FieldEntry {
-  elementType: ElementType
-  index: number
-  elementName: string
-  key: string
-  value: string
-}
-
 // Flatten an object's string-leaf fields with dot-notation keys.
 function collectStringFields(obj: any, prefix = ''): { key: string; value: string }[] {
   if (!obj || typeof obj !== 'object') return []

@@ -86,6 +86,7 @@
                 :key="row.node.id"
                 class="history-row glass-row"
                 role="option"
+                tabindex="0"
                 :aria-selected="row.node.id === selectedId"
                 :class="{
                   'history-row-current': row.node.id === historyStore.currentId,
@@ -94,6 +95,7 @@
                   'history-row-dimmed': searchQuery && !row.matchesSearch,
                 }"
                 @click="selectRow(row.node.id)"
+                @keydown.enter="selectRow(row.node.id)"
                 @dblclick="jumpToSelected"
               >
                 <!-- Indentation + connectors -->

@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-// eslint-disable-next-line import/no-cycle
 import { useRecipesStore } from './recipes'
 import Ajv from 'ajv'
 import addFormats from 'ajv-formats'

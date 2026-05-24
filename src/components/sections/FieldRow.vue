@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col gap-1" @focusin="onFocusIn">
     <div class="flex items-center gap-1">
-      <label class="text-xs font-medium text-gray-400">{{ label }}</label>
+      <span class="text-xs font-medium text-gray-400">{{ label }}</span>
       <PopoverRoot v-if="summary">
         <PopoverTrigger as-child>
           <button class="text-gray-600 hover:text-indigo-400 flex-shrink-0" type="button" tabindex="-1" :aria-label="summary ? `Info: ${summary}` : 'Show info'">

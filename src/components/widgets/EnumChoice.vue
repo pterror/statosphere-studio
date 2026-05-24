@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col gap-1">
-    <select :value="modelValue" class="field-input" @change="onChange">
+    <select :value="modelValue" :aria-label="ariaLabel" class="field-input" @change="onChange">
       <option
         v-for="opt in options"
         :key="opt.value"
@@ -23,6 +23,7 @@ export interface EnumOption {
 const props = defineProps<{
   modelValue: string
   options: EnumOption[]
+  ariaLabel?: string
 }>()
 
 const emit = defineEmits<{

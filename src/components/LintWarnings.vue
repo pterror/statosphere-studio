@@ -33,7 +33,7 @@ import type { LintResult } from '../stores/lints'
 import type { ConfigTree } from '../stores/config'
 import { useConfigStore } from '../stores/config'
 
-const props = defineProps<{
+defineProps<{
   lints: LintResult[]
 }>()
 

@@ -66,7 +66,12 @@
               v-for="node in layout.nodes"
               :key="node.id"
               class="cursor-pointer"
+              tabindex="0"
+              role="button"
+              :aria-label="node.label"
               @click="jumpTo(node)"
+              @keydown.enter="jumpTo(node)"
+              @keydown.space.prevent="jumpTo(node)"
             >
               <!-- variable: circle -->
               <circle
@@ -216,7 +221,7 @@ const layout = computed(() => {
   if (!instances.length) return null
 
   const mat = recipesStore.materialized
-  const allVarNames = new Set(mat.variables.map((v: any) => v.name))
+  const _allVarNames = new Set(mat.variables.map((v: any) => v.name))
   const nodes: GNode[] = []
   const nodeById = new Map<string, GNode>()
 
@@ -238,7 +243,7 @@ const layout = computed(() => {
 
   // Build node list per instance group
   const clusters: GCluster[] = []
-  let clusterX = CLUSTER_PAD
+  const _clusterX = CLUSTER_PAD
 
   const colCounts = [0, 0, 0]
 
@@ -285,7 +290,7 @@ const layout = computed(() => {
   for (const cluster of clusters) {
     const inst = instances.find((i) => i.id === cluster.id)
     if (!inst) continue
-    const types = ['variables', 'classifiers', 'generators', 'contentRules', 'functions']
+    const _types = ['variables', 'classifiers', 'generators', 'contentRules', 'functions']
     const instNodes = nodes.filter((n) => n.instanceId === inst.id)
     if (!instNodes.length) continue
     const xs = instNodes.map((n) => n.cx)

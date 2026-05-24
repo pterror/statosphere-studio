@@ -2,18 +2,18 @@
   <div class="flex flex-col gap-2">
     <!-- Core: single row -->
     <div class="flex gap-2 items-end">
-      <div class="flex flex-col gap-0.5 flex-1 min-w-0">
-        <label class="text-xs text-gray-500">Name</label>
+      <label class="flex flex-col gap-0.5 flex-1 min-w-0">
+        <span class="text-xs text-gray-500">Name</span>
         <input v-model="item.name" class="field-input" placeholder="name" @input="emit('change')" />
-      </div>
-      <div class="flex flex-col gap-0.5 flex-1 min-w-0">
-        <label class="text-xs text-gray-500">Initial value</label>
+      </label>
+      <label class="flex flex-col gap-0.5 flex-1 min-w-0">
+        <span class="text-xs text-gray-500">Initial value</span>
         <input v-model="item.initialValue" class="field-input" placeholder="initial value" @input="emit('change')" />
-      </div>
-      <div class="flex flex-col gap-0.5 flex-1 min-w-0">
-        <label class="text-xs text-gray-500">Per-turn update</label>
+      </label>
+      <label class="flex flex-col gap-0.5 flex-1 min-w-0">
+        <span class="text-xs text-gray-500">Per-turn update</span>
         <input v-model="item.perTurnUpdate" class="field-input" placeholder="per-turn update" @input="emit('change')" />
-      </div>
+      </label>
       <button class="text-xs text-gray-500 hover:text-gray-300 px-1 shrink-0" :title="showAdvanced ? 'Hide advanced' : 'Show advanced'" @click="showAdvanced = !showAdvanced">{{ showAdvanced ? '▲' : '▼' }}</button>
     </div>
 

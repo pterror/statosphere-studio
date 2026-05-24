@@ -45,6 +45,7 @@
         :class="{ highlighted: i === selectedIndex }"
         draggable="true"
         @mouseenter="selectedIndex = i"
+        @focusin="selectedIndex = i"
         @click="addRecipe(item.def.id)"
         @dragstart="onDragStart($event, item)"
         @dragend="onDragEnd"

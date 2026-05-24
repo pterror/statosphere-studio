@@ -45,6 +45,7 @@ const props = withDefaults(defineProps<{
   confirmLabel: 'Confirm',
   cancelLabel: 'Cancel',
   tone: 'normal',
+  extraAction: undefined,
 })
 
 const emit = defineEmits<{

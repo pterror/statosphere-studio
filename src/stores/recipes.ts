@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { cloneJson } from '../lib/clone'
 import type { RecipeInstance, RecipeDef, ElementType, SchemaArrays, AnyElement } from '../recipes/types'
 import { migrateInstance } from '../recipes/types'

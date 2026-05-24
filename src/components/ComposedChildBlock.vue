@@ -254,7 +254,7 @@ const childElements = computed(() => {
   return materializeInstances([syntheticInst])
 })
 
-const childElementCount = computed(() =>
+const _childElementCount = computed(() =>
   ELEMENT_TYPES.reduce((s, et) => s + childElements.value[et].length, 0),
 )
 

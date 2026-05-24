@@ -26,6 +26,8 @@
       @click="lintPopoverOpen = !lintPopoverOpen"
       @mouseenter="lintPopoverOpen = true"
       @mouseleave="lintPopoverOpen = false"
+      @focusin="lintPopoverOpen = true"
+      @focusout="lintPopoverOpen = false"
     >
       <span
         class="w-2 h-2 rounded-full block"
