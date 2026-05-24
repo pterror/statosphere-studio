@@ -34,7 +34,7 @@
               class="flex items-center gap-2 text-xs rounded px-2 py-1 glass-panel-soft" style="color: var(--text-secondary)"
             >
               <span class="flex-1 font-mono truncate">{{ prefix }}</span>
-              <button class="text-red-400 hover:text-red-300 shrink-0" @click="settings.removeTrustedPrefix(prefix)">&times;</button>
+              <button class="text-red-400 hover:text-red-300 shrink-0" :aria-label="`Remove trusted prefix ${prefix}`" @click="settings.removeTrustedPrefix(prefix)">&times;</button>
             </div>
           </div>
           <div class="flex gap-2">
@@ -78,7 +78,7 @@
             >
               <span class="flex-1 text-gray-300 truncate">{{ slot.name }}</span>
               <span class="text-gray-500">{{ new Date(slot.updatedAt).toLocaleDateString() }}</span>
-              <button class="text-red-400 hover:text-red-300 shrink-0" @click="draftsStore.delete(name)">&times;</button>
+              <button class="text-red-400 hover:text-red-300 shrink-0" :aria-label="`Delete draft ${slot.name}`" @click="draftsStore.delete(name)">&times;</button>
             </div>
           </div>
 
@@ -91,7 +91,7 @@
               class="flex items-center gap-2 text-xs rounded px-2 py-1 glass-panel-soft"
             >
               <span class="flex-1 text-gray-300 truncate">{{ def.name }}</span>
-              <button class="text-red-400 hover:text-red-300 shrink-0" @click="recipesStore.removeCustomRecipe(def.id)">&times;</button>
+              <button class="text-red-400 hover:text-red-300 shrink-0" :aria-label="`Remove recipe ${def.name}`" @click="recipesStore.removeCustomRecipe(def.id)">&times;</button>
             </div>
           </div>
 

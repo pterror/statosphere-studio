@@ -4,7 +4,12 @@
     <div
       class="flex items-center gap-2 px-3 py-1 cursor-pointer select-none"
       style="background: var(--glass-bg)"
+      role="button"
+      tabindex="0"
+      :aria-label="open || fullscreen ? 'Collapse JSON panel' : 'Expand JSON panel'"
       @click="!fullscreen && (open = !open)"
+      @keydown.enter.prevent="!fullscreen && (open = !open)"
+      @keydown.space.prevent="!fullscreen && (open = !open)"
     >
       <span class="text-xs text-gray-400">
         {{ open || fullscreen ? (fullscreen ? '↙' : '▼') : '▶' }} JSON

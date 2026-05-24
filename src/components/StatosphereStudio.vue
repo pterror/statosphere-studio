@@ -14,7 +14,7 @@
         class="ml-auto px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs"
         @click="addInstanceNow"
       >Add an instance now</button>
-      <button class="text-indigo-300 hover:text-white text-xs ml-2" @click="rcpBanner = null">&times;</button>
+      <button class="text-indigo-300 hover:text-white text-xs ml-2" aria-label="Dismiss" @click="rcpBanner = null">&times;</button>
     </div>
     <StreamCanvas ref="canvasRef" :class="embedded ? 'pt-0' : ''" @open-library-modal="libraryModalOpen = true" />
     <Toast />

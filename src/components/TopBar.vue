@@ -60,7 +60,7 @@
     </Popover>
     <DropdownMenuRoot>
       <DropdownMenuTrigger as-child>
-        <button class="btn-action">⋯</button>
+        <button class="btn-action" title="More options">⋯</button>
       </DropdownMenuTrigger>
       <DropdownMenuPortal>
         <DropdownMenuContent class="glass-panel z-50 py-1 min-w-[180px]" style="border-radius: 10px" :side-offset="4">

@@ -9,7 +9,13 @@
     <div
       class="block-header px-4 py-2 cursor-pointer hover:bg-[var(--glass-bg-hover)] rounded-t-[12px]"
       style="border-bottom: 1px solid var(--glass-border)"
+      role="button"
+      tabindex="0"
+      :aria-label="`${instance.name} — ${collapsed ? 'expand' : 'collapse'} block`"
+      :aria-expanded="!collapsed"
       @click="collapsed = !collapsed"
+      @keydown.enter.prevent="collapsed = !collapsed"
+      @keydown.space.prevent="collapsed = !collapsed"
     >
       <!-- First row: grip + name + recipe label + collapse + ⋯ -->
       <div class="flex items-center gap-2">
@@ -40,6 +46,7 @@
           v-else
           class="block-name text-sm font-medium text-gray-100 cursor-text"
           title="Click to rename"
+          role="button"
           @click.stop="beginRename"
           tabindex="0"
           @keydown.enter.prevent="beginRename"

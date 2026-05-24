@@ -4,7 +4,7 @@
       <label class="text-xs font-medium text-gray-400">{{ label }}</label>
       <PopoverRoot v-if="summary">
         <PopoverTrigger as-child>
-          <button class="text-gray-600 hover:text-indigo-400 flex-shrink-0" type="button" tabindex="-1">
+          <button class="text-gray-600 hover:text-indigo-400 flex-shrink-0" type="button" tabindex="-1" :aria-label="summary ? `Info: ${summary}` : 'Show info'">
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="10"/>
               <path d="M12 16v-4"/>

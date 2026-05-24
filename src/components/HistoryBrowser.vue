@@ -38,6 +38,7 @@
             <button
               class="text-lg leading-none"
               style="color: var(--text-muted)"
+              aria-label="Close history browser"
               @click="emit('close')"
             >&times;</button>
           </div>
@@ -84,6 +85,8 @@
                 v-for="row in visibleRows"
                 :key="row.node.id"
                 class="history-row glass-row"
+                role="option"
+                :aria-selected="row.node.id === selectedId"
                 :class="{
                   'history-row-current': row.node.id === historyStore.currentId,
                   'history-row-selected': row.node.id === selectedId,

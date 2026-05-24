@@ -8,7 +8,13 @@
     <div
       class="glass-row flex items-center gap-2 px-3 py-1.5 cursor-pointer rounded"
       :class="headerSizeClass"
+      role="button"
+      tabindex="0"
+      :aria-label="`${childDef?.name ?? refDef.refId} — ${collapsed ? 'expand' : 'collapse'}`"
+      :aria-expanded="!collapsed"
       @click="collapsed = !collapsed"
+      @keydown.enter.prevent="collapsed = !collapsed"
+      @keydown.space.prevent="collapsed = !collapsed"
     >
       <span class="font-medium" style="color: var(--text-secondary)">{{ childDef?.name ?? refDef.refId }}</span>
       <span class="text-xs text-gray-600">{{ refDef.refId }}</span>
@@ -22,13 +28,21 @@
               v-if="isParentBound(p.key)"
               class="text-xs text-gray-500 cursor-pointer hover:text-indigo-400"
               title="Bound from parent — click to override"
+              role="button"
+              tabindex="0"
               @click.stop="unlinkParam(p.key)"
+              @keydown.enter.stop.prevent="unlinkParam(p.key)"
+              @keydown.space.stop.prevent="unlinkParam(p.key)"
             >⛓</span>
             <span
               v-else
               class="text-xs text-amber-500 cursor-pointer hover:text-gray-400"
               title="Override (click to re-link to parent)"
+              role="button"
+              tabindex="0"
               @click.stop="relinkParam(p.key)"
+              @keydown.enter.stop.prevent="relinkParam(p.key)"
+              @keydown.space.stop.prevent="relinkParam(p.key)"
             >⛓‍💥</span>
             <!-- label-list chips -->
             <template v-if="p.kind === 'label-list'">

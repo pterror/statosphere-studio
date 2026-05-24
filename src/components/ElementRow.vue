@@ -2,7 +2,13 @@
   <div class="flex flex-col element-row-wrap" :data-element-section="elementType" :data-element-name="displayName">
     <div
       class="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-800 rounded cursor-pointer element-row"
+      role="button"
+      tabindex="0"
+      :aria-label="`${displayName} — ${expanded ? 'collapse' : 'expand'}`"
+      :aria-expanded="expanded"
       @click="toggleExpanded"
+      @keydown.enter.prevent="toggleExpanded"
+      @keydown.space.prevent="toggleExpanded"
     >
       <span
         v-if="dragSource"

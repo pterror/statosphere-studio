@@ -17,7 +17,12 @@
       <span
         v-else
         class="chip-item"
+        role="button"
+        tabindex="0"
+        :aria-label="`Edit chip: ${chip}`"
         @click="startEdit(ci)"
+        @keydown.enter.prevent="startEdit(ci)"
+        @keydown.space.prevent="startEdit(ci)"
       >
         {{ chip }}
         <button
