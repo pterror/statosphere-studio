@@ -115,9 +115,11 @@ function deleteSlot(name: string) {
 .btn-action {
   @apply px-3 py-1 rounded text-sm bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-gray-100 transition-colors;
 }
+
 .btn-save {
   @apply px-2 py-1 rounded text-xs bg-indigo-600 text-white hover:bg-indigo-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed;
 }
+
 .icon-btn {
   @apply px-1 text-xs text-gray-500 hover:text-gray-200 transition-colors;
 }

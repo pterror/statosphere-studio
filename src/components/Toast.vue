@@ -51,13 +51,13 @@ function onAction(item: ToastItem) {
 .toast-item {
   max-width: min(480px, calc(100vw - 32px));
   overflow-wrap: break-word;
-  word-break: break-word;
 }
 
 .toast-enter-active,
 .toast-leave-active {
   transition: opacity 150ms ease, transform 150ms ease;
 }
+
 .toast-enter-from,
 .toast-leave-to {
   opacity: 0;

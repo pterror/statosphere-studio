@@ -100,6 +100,7 @@ defineExpose({ open, focusSearch })
 <style scoped>
 .browse-strip {
   @apply shrink-0;
+
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
@@ -108,6 +109,7 @@ defineExpose({ open, focusSearch })
 
 .strip-bar {
   @apply w-full flex items-center gap-3 px-4 py-2 transition-colors cursor-pointer;
+
   color: var(--text-secondary);
 }
 

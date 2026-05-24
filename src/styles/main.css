@@ -1,4 +1,5 @@
 @import './glass.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -16,7 +17,7 @@
 
 [data-theme="light"] {
   --bg-base: #f9fafb;
-  --bg-surface: #ffffff;
+  --bg-surface: #fff;
   --bg-raised: #f3f4f6;
   --border: #d1d5db;
   --text-primary: #111827;
@@ -30,6 +31,7 @@
 [data-theme="light"] .bg-gray-950 { background-color: var(--bg-base) !important; }
 [data-theme="light"] .bg-gray-900 { background-color: var(--bg-surface) !important; }
 [data-theme="light"] .bg-gray-800 { background-color: var(--bg-raised) !important; }
+
 [data-theme="light"] .border-gray-800,
 [data-theme="light"] .border-gray-700 { border-color: var(--border) !important; }
 [data-theme="light"] .text-gray-100 { color: var(--text-primary) !important; }

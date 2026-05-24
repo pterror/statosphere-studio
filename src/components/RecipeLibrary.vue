@@ -254,11 +254,13 @@ onMounted(() => {
 
 .search-row {
   @apply flex items-center gap-2 px-4 py-3;
+
   border-bottom: 1px solid var(--glass-border);
 }
 
 .recipe-library.inline .search-row {
   @apply rounded-lg;
+
   border: 1px solid var(--glass-border);
   background: var(--glass-bg);
 }
@@ -273,6 +275,7 @@ onMounted(() => {
 
 .chip {
   @apply px-3 py-1 rounded-full text-xs transition-colors;
+
   background: var(--glass-bg-strong);
   border: 1px solid var(--glass-border);
   color: var(--text-muted);
@@ -291,11 +294,13 @@ onMounted(() => {
 
 .card-grid {
   @apply grid gap-3 px-4 overflow-y-auto;
+
   grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));
 }
 
 .recipe-library.inline .card-grid {
   @apply px-0;
+
   grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
   max-height: calc(50vh - 120px);
   min-height: 0;
@@ -313,6 +318,7 @@ onMounted(() => {
 
 .recipe-card {
   @apply flex flex-col p-3 rounded-lg transition-colors cursor-grab text-left;
+
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
 }
@@ -349,12 +355,14 @@ onMounted(() => {
 
 .keyboard-hint {
   @apply flex gap-4 px-4 py-2 text-xs;
+
   border-top: 1px solid var(--glass-border);
   color: var(--text-muted);
 }
 
 kbd {
   @apply px-1 rounded;
+
   background: var(--glass-bg-strong);
   border: 1px solid var(--glass-border);
 }

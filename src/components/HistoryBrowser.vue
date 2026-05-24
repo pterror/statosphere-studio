@@ -100,7 +100,7 @@
               >
                 <!-- Indentation + connectors -->
                 <span class="history-indent" :style="{ width: row.depth * 16 + 'px' }" />
-                <span class="history-connector font-mono text-xs" style="color: var(--text-muted); width: 12px; shrink-0">{{ row.connector }}</span>
+                <span class="history-connector font-mono text-xs shrink-0" style="color: var(--text-muted); width: 12px">{{ row.connector }}</span>
 
                 <!-- Inline rename input -->
                 <template v-if="renamingId === row.node.id">
@@ -556,9 +556,11 @@ async function confirmHistoryImport() {
   cursor: pointer;
   line-height: 1;
 }
+
 .history-row:hover .history-action-btn {
   opacity: 1;
 }
+
 .history-action-btn:hover {
   color: var(--text-primary);
   background: var(--glass-bg-hover);
@@ -577,12 +579,14 @@ async function confirmHistoryImport() {
   .history-body {
     flex-direction: column;
   }
+
   .history-tree-pane {
     width: 100%;
     max-height: 50%;
     border-right: none;
     border-bottom: 1px solid var(--glass-border);
   }
+
   .history-preview-pane {
     max-height: 50%;
   }

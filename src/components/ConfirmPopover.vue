@@ -88,6 +88,7 @@ function cancel() {
 <style scoped>
 .confirm-popover {
   @apply rounded-lg p-3;
+
   width: 260px;
   background: var(--glass-bg-strong);
   backdrop-filter: var(--glass-blur);
@@ -103,6 +104,7 @@ function cancel() {
 
 .prompt {
   @apply text-xs mb-3 leading-relaxed;
+
   color: var(--text-secondary);
 }
 
@@ -112,30 +114,36 @@ function cancel() {
 
 .btn-cancel {
   @apply px-2.5 py-1 rounded text-xs transition-colors;
+
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   color: var(--text-muted);
 }
+
 .btn-cancel:hover {
   background: var(--glass-bg-hover);
 }
 
 .btn-extra {
   @apply px-2.5 py-1 rounded text-xs transition-colors;
+
   background: var(--glass-bg);
   border: 1px solid var(--glass-border-light);
   color: var(--text-secondary);
 }
+
 .btn-extra:hover {
   background: var(--glass-bg-hover);
 }
 
 .btn-confirm {
   @apply px-2.5 py-1 rounded text-xs transition-colors;
+
   background: var(--accent-soft);
   border: 1px solid var(--accent);
   color: var(--accent);
 }
+
 .btn-confirm:hover {
   background: var(--glass-bg-hover);
 }
@@ -145,6 +153,7 @@ function cancel() {
   border-color: rgba(185, 28, 28, 0.7);
   color: #fca5a5;
 }
+
 .btn-confirm.danger:hover {
   background: rgba(127, 29, 29, 0.7);
 }

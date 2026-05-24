@@ -138,29 +138,38 @@ async function copyRecipe() {
 <style scoped>
 .btn-action {
   @apply px-3 py-1.5 rounded text-sm transition-colors shrink-0;
+
   background: var(--accent-soft);
   border: 1px solid var(--accent);
   color: var(--accent);
 }
+
 .btn-action:hover {
   background: var(--glass-bg-hover);
 }
+
 .tab-btn {
   @apply px-4 py-2 text-sm border-b-2 -mb-px transition-colors;
 }
+
 .tab-active {
   border-color: var(--accent);
   color: var(--accent);
 }
+
 .tab-inactive {
   @apply border-transparent;
+
   color: var(--text-muted);
 }
+
 .tab-inactive:hover {
   color: var(--text-secondary);
 }
+
 .tab-disabled {
   @apply border-transparent cursor-not-allowed;
+
   color: var(--text-muted);
   opacity: 0.5;
 }

@@ -226,18 +226,23 @@ onUnmounted(() => window.removeEventListener('keydown', onGlobalKeydown))
 <style scoped>
 .btn-action {
   @apply px-3 py-1 rounded text-sm transition-colors;
+
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   color: var(--text-secondary);
 }
+
 .btn-action:hover {
   background: var(--glass-bg-hover);
   color: var(--text-primary);
 }
+
 .menu-item {
   @apply px-4 py-2 text-sm cursor-pointer outline-none block w-full text-left;
+
   color: var(--text-secondary);
 }
+
 .menu-item:hover {
   background: var(--glass-bg-hover);
   color: var(--text-primary);
@@ -254,6 +259,7 @@ onUnmounted(() => window.removeEventListener('keydown', onGlobalKeydown))
 .menu-item-narrow-only {
   display: none;
 }
+
 @media (max-width: 600px) {
   .menu-item-narrow-only {
     display: block;
@@ -271,6 +277,7 @@ onUnmounted(() => window.removeEventListener('keydown', onGlobalKeydown))
   justify-content: center;
   border-radius: 4px;
 }
+
 .validity-dot-btn:focus-visible {
   box-shadow: 0 0 0 2px var(--accent-soft);
 }

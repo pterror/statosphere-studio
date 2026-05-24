@@ -353,17 +353,21 @@ function addChildElement(et: ElementType) {
 <style scoped>
 .param-input {
   @apply rounded px-1.5 py-0.5 text-xs outline-none;
+
   background: rgba(0, 0, 0, 0.15);
   border: 1px solid var(--glass-border);
   color: var(--text-primary);
 }
+
 :root[data-theme="light"] .param-input {
   background: rgba(255, 255, 255, 0.50);
 }
+
 .param-input:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent-soft);
 }
+
 /* Past depth 3: slightly reduce header font size */
 .composed-child--deep .glass-row {
   font-size: 0.9rem;
@@ -408,18 +412,22 @@ function addChildElement(et: ElementType) {
   border-radius: 3px;
   transition: opacity 120ms ease, filter 120ms ease;
 }
+
 .pin-btn--idle {
   opacity: 0;
   filter: grayscale(1);
 }
+
 .inherited-row:hover .pin-btn--idle,
 .pin-btn--idle:focus {
   opacity: 0.5;
 }
+
 .pin-btn--idle:hover {
   opacity: 0.85 !important;
   filter: none;
 }
+
 .pin-btn:focus-visible {
   box-shadow: 0 0 0 2px var(--accent-soft);
 }

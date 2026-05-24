@@ -55,10 +55,12 @@ function select(kind: ElementType) {
 <style scoped>
 .btn-action {
   @apply px-3 py-1 rounded text-sm transition-colors;
+
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   color: var(--text-secondary);
 }
+
 .btn-action:hover {
   background: var(--glass-bg-hover);
   color: var(--text-primary);

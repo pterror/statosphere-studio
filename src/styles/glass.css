@@ -66,6 +66,7 @@ body {
 .glass-row {
   transition: background 120ms ease-out;
 }
+
 .glass-row:hover {
   background: var(--glass-bg-hover);
 }
@@ -80,9 +81,11 @@ body {
   cursor: pointer;
   transition: background 120ms ease-out;
 }
+
 .glass-button:hover {
   background: var(--glass-bg-hover);
 }
+
 .glass-button[data-tone="accent"] {
   background: var(--accent-soft);
   border-color: var(--accent);
@@ -96,9 +99,11 @@ body {
   color: var(--text-primary);
   padding: 4px 8px;
 }
+
 :root[data-theme="light"] .glass-input {
   background: rgba(255, 255, 255, 0.50);
 }
+
 .glass-input:focus {
   outline: none;
   border-color: var(--accent);

@@ -15,6 +15,9 @@ RUN bun run typecheck
 echo "Running lint:eslint..."
 RUN bun run lint:eslint
 
+echo "Running lint:style..."
+RUN bun run lint:style
+
 echo "Running build..."
 RUN bun run build
 

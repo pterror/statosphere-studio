@@ -165,10 +165,12 @@ defineExpose({ expand: () => { expanded.value = true } })
   color: rgba(156, 163, 175, 0.35); /* muted gray at rest */
   transition: color 120ms ease;
 }
+
 .element-row:hover .drag-handle,
 .drag-handle:focus {
   color: rgba(209, 213, 219, 0.85);
 }
+
 .drag-handle:focus-visible {
   box-shadow: 0 0 0 2px var(--accent-soft);
   border-radius: 2px;
@@ -185,22 +187,27 @@ defineExpose({ expand: () => { expanded.value = true } })
   border-radius: 3px;
   transition: opacity 120ms ease, filter 120ms ease;
 }
+
 .pin-btn--idle {
   opacity: 0;
   filter: grayscale(1);
 }
+
 .element-row:hover .pin-btn--idle,
 .pin-btn--idle:focus {
   opacity: 0.5;
 }
+
 .pin-btn--idle:hover {
   opacity: 0.85 !important;
   filter: none;
 }
+
 .pin-btn--active {
   opacity: 1;
   filter: none;
 }
+
 .pin-btn:focus-visible {
   box-shadow: 0 0 0 2px var(--accent-soft);
 }

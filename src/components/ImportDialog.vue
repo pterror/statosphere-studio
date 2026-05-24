@@ -157,15 +157,19 @@ function doImport() {
 <style scoped>
 .btn-action {
   @apply px-3 py-1.5 rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+
   background: var(--accent-soft);
   border: 1px solid var(--accent);
   color: var(--accent);
 }
+
 .btn-action:hover:not(:disabled) {
   background: var(--glass-bg-hover);
 }
+
 .btn-cancel {
   @apply px-3 py-1.5 rounded text-sm;
+
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   border-top-color: var(--glass-border-light);
@@ -173,6 +177,7 @@ function doImport() {
   cursor: pointer;
   transition: background 120ms ease-out;
 }
+
 .btn-cancel:hover {
   background: var(--glass-bg-hover);
 }
