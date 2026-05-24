@@ -65,6 +65,7 @@ import GeneratorForm from './forms/GeneratorForm.vue'
 import ContentRuleForm from './forms/ContentRuleForm.vue'
 import FunctionDefForm from './forms/FunctionDefForm.vue'
 import { makeDragSource } from '../composables/use-dnd'
+import { cloneJson } from '../lib/clone'
 
 const props = defineProps<{
   elementType: ElementType
@@ -117,7 +118,7 @@ function onEdit() {
   if (props.instanceId && !isPinned.value && elementName.value) {
     recipesStore.pinElement(props.instanceId, props.elementType, elementName.value)
   } else if (props.instanceId && isPinned.value && elementName.value) {
-    recipesStore.updatePinnedElement(props.instanceId, props.elementType, elementName.value, structuredClone(props.element))
+    recipesStore.updatePinnedElement(props.instanceId, props.elementType, elementName.value, cloneJson(props.element))
   }
   emit('change')
 }

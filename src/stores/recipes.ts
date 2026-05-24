@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
+import { cloneJson } from '../lib/clone'
 import type { RecipeInstance, RecipeDef, ElementType, SchemaArrays, AnyElement } from '../recipes/types'
 import { migrateInstance } from '../recipes/types'
 import { materializeInstances, localsFromTemplate, instanceLocals } from '../recipes/materialize'
@@ -76,7 +77,7 @@ export const useRecipesStore = defineStore('recipes', () => {
   }
 
   function snapshotInstances(): RecipeInstance[] {
-    return structuredClone(instances.value)
+    return cloneJson(instances.value)
   }
 
   function restoreInstances(snapshot: RecipeInstance[]): void {
@@ -188,7 +189,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     let elementData: AnyElement | null = null
 
     if (pinnedIdx !== -1) {
-      elementData = structuredClone(srcInst.pinned[pinnedIdx].override)
+      elementData = cloneJson(srcInst.pinned[pinnedIdx].override)
       srcInst.pinned.splice(pinnedIdx, 1)
     } else {
       const srcBucket = srcInst.extrasByPath?.[sourcePath]
@@ -196,7 +197,7 @@ export const useRecipesStore = defineStore('recipes', () => {
         (el) => ((el as { name?: string; category?: string })?.name ?? (el as { category?: string })?.category) === elementName,
       ) ?? -1
       if (extrasIdx !== -1) {
-        elementData = structuredClone(srcBucket![elementType][extrasIdx])
+        elementData = cloneJson(srcBucket![elementType][extrasIdx])
         srcBucket![elementType].splice(extrasIdx, 1)
       } else {
         // Materialized-from-recipe but not pinned — pin first, then move
@@ -208,7 +209,7 @@ export const useRecipesStore = defineStore('recipes', () => {
             : materializeInstances([srcInst])
         const el = mat[elementType].find((e) => (e as { name?: string })?.name === elementName)
         if (!el) return { rebound: 0, dangling: 0 }
-        elementData = structuredClone(el)
+        elementData = cloneJson(el)
       }
     }
 
@@ -242,7 +243,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     }
     singleArrays[elementType] = [elementData!]
     const rewritten = rewriteIdentifiers(singleArrays, fromTo)
-    const rewrittenElement = structuredClone(rewritten[elementType][0])
+    const rewrittenElement = cloneJson(rewritten[elementType][0])
 
     const rebound = Object.keys(fromTo).length
     // Count remaining source-prefixed refs after rewrite.
@@ -314,7 +315,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     const newId = crypto.randomUUID()
     const copyName = inst.name + ' copy'
     instances.value.push({
-      ...structuredClone(inst),
+      ...cloneJson(inst),
       id: newId,
       name: copyName,
     })
@@ -345,7 +346,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     if (!el) return
     if (!inst.pinned.find((p) => p.elementType === elementType && p.elementName === elementName)) {
       const before = snapshotInstances()
-      inst.pinned.push({ elementType, elementName, override: structuredClone(el) })
+      inst.pinned.push({ elementType, elementName, override: cloneJson(el) })
       persist()
       const after = snapshotInstances()
       useHistoryStore().commit(before, after, `Pin element "${elementName}"`)

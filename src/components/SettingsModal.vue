@@ -166,6 +166,7 @@ import { useRecipesStore } from '../stores/recipes'
 import { useToastStore } from '../stores/toast'
 import { useHistoryStore } from '../stores/history'
 import ConfirmPopover from './ConfirmPopover.vue'
+import { cloneJson } from '../lib/clone'
 import type { RecipeInstance, RecipeDef } from '../recipes/types'
 import type { DraftSlot } from '../stores/drafts'
 import type { HistoryExport } from '../stores/history'
@@ -210,9 +211,9 @@ function exportEverything() {
   const payload: BundlePayload = {
     version: 'studio-export-1',
     exportedAt: new Date().toISOString(),
-    recipes: structuredClone(recipesStore.instances),
-    customLibrary: structuredClone(recipesStore.customLibrary),
-    drafts: structuredClone(draftsStore.list),
+    recipes: cloneJson(recipesStore.instances),
+    customLibrary: cloneJson(recipesStore.customLibrary),
+    drafts: cloneJson(draftsStore.list),
     settings: settings.export(),
   }
   if (includeHistory.value) {

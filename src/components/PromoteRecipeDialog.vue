@@ -127,6 +127,7 @@ import { ref, computed } from 'vue'
 import type { RecipeInstance, SchemaArrays, ElementType, RecipeDef, ParamSpec, Substitution } from '../recipes/types'
 import { localsFromTemplate } from '../recipes/materialize'
 import { useRecipesStore } from '../stores/recipes'
+import { cloneJson } from '../lib/clone'
 
 const props = defineProps<{
   instance: RecipeInstance
@@ -262,7 +263,7 @@ function onCreate() {
   }
 
   // Build template: snapshot of current materialized output.
-  const template: SchemaArrays = structuredClone(props.materialized)
+  const template: SchemaArrays = cloneJson(props.materialized)
 
   // Build substitutions list and ParamSpec array.
   const substitutions: Substitution[] = []
