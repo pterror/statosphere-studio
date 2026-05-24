@@ -22,7 +22,9 @@
     "lint": "vue-tsc --noEmit",
     "typecheck": "vue-tsc --noEmit",
     "preview": "vite preview",
-    "validate-recipes": "bun run scripts/validate-recipes.ts"
+    "validate-recipes": "bun run scripts/validate-recipes.ts",
+    "lint:eslint": "eslint src scripts --max-warnings 0",
+    "lint:eslint:fix": "eslint src scripts --fix"
   },
   "peerDependencies": {
     "pinia": ">=2.0.0",
@@ -40,14 +42,20 @@
     "vue": "^3.4.27"
   },
   "devDependencies": {
+    "@typescript-eslint/parser": "^8.59.4",
     "@vitejs/plugin-vue": "^5.0.4",
+    "@vue/eslint-config-typescript": "^14.7.0",
     "@vue/tsconfig": "^0.5.1",
     "autoprefixer": "^10.4.19",
+    "eslint": "^10.4.0",
+    "eslint-plugin-vue": "^10.9.1",
+    "eslint-plugin-vuejs-accessibility": "^2.5.0",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.3",
     "typescript": "^5.4.5",
     "vite": "^5.2.11",
     "vite-plugin-dts": "^3.9.1",
+    "vue-eslint-parser": "^10.4.0",
     "vue-tsc": "^2.0.16"
   }
 }
