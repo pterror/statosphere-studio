@@ -10,6 +10,8 @@
       <input
         ref="searchInput"
         v-model="query"
+        type="search"
+        aria-label="Search recipes"
         class="flex-1 bg-transparent text-sm outline-none"
         style="color: var(--text-primary)"
         placeholder="Search recipes…"

@@ -60,12 +60,14 @@
               :value="resolvedParams[p.key] as number"
               :min="p.min"
               :max="p.max"
+              :aria-label="p.label"
               class="param-input w-20"
               @change="overrideParam(p.key, Number(($event.target as HTMLInputElement).value))"
             />
             <select
               v-else-if="p.kind === 'enum'"
               :value="resolvedParams[p.key]"
+              :aria-label="p.label"
               class="param-input"
               @change="overrideParam(p.key, ($event.target as HTMLSelectElement).value)"
             >
@@ -75,6 +77,7 @@
               v-else
               type="text"
               :value="resolvedParams[p.key] as string"
+              :aria-label="p.label"
               class="param-input w-24"
               @change="overrideParam(p.key, ($event.target as HTMLInputElement).value)"
             />

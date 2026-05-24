@@ -1,3 +1,4 @@
+import { cloneJson } from '../../lib/clone'
 import type { RecipeDef, SchemaArrays } from '../types'
 
 const empty: SchemaArrays = {
@@ -15,7 +16,7 @@ const def: RecipeDef = {
   tags: [],
   params: [],
   locals: { variables: [], classifiers: [], generators: [], functions: [] },
-  source: { kind: 'builtin', materialize: () => structuredClone(empty) },
+  source: { kind: 'builtin', materialize: () => cloneJson(empty) },
 }
 
 export default def

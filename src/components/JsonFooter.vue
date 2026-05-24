@@ -29,6 +29,7 @@
         class="flex-1 w-full font-mono text-xs p-3 resize-none outline-none min-h-48"
         style="background: rgba(0,0,0,0.25); color: #7bf5a0"
         :value="draft"
+        aria-label="JSON configuration"
         spellcheck="false"
         @input="onInput"
       />

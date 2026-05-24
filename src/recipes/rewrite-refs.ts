@@ -1,3 +1,4 @@
+import { cloneJson } from '../lib/clone'
 import type { SchemaArrays, ElementUpdate, ClassificationEntry, AnyElement } from './types'
 
 export type RenameMap = {
@@ -123,7 +124,7 @@ export function rewriteIdentifiers(arrays: SchemaArrays, fromTo: Record<string, 
 }
 
 export function rewriteRefs(arrays: SchemaArrays, renameMap: RenameMap): SchemaArrays {
-  const result: SchemaArrays = structuredClone(arrays)
+  const result: SchemaArrays = cloneJson(arrays)
 
   const varEntries = Object.entries(renameMap.variables)
   const classEntries = Object.entries(renameMap.classifiers)

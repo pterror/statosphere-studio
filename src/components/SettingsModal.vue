@@ -40,6 +40,7 @@
           <div class="flex gap-2">
             <input
               v-model="newPrefix"
+              aria-label="New trusted prefix"
               class="glass-input flex-1 rounded px-2 py-1 text-xs font-mono"
               placeholder="https://example.com/"
               @keydown.enter="addPrefix"

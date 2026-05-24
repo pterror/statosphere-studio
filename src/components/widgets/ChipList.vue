@@ -41,6 +41,7 @@
       v-model="newValue"
       type="text"
       class="chip-input chip-new-input"
+      :aria-label="label ? `Add ${label}` : 'Add item'"
       :placeholder="placeholder ?? '+ add'"
       @keydown.enter.prevent="commitNew"
       @keydown.tab="onTabNew"
@@ -56,8 +57,10 @@ import { ref, nextTick, watch } from 'vue'
 const props = withDefaults(defineProps<{
   modelValue: string[]
   placeholder?: string
+  label?: string
 }>(), {
   placeholder: undefined,
+  label: undefined,
 })
 
 const emit = defineEmits<{

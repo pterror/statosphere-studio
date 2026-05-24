@@ -4,6 +4,8 @@
  * No move/copy/test. Naive structural diff; optimize if profiling warrants.
  */
 
+import { cloneJson } from './clone'
+
 export type PatchOp =
   | { op: 'replace'; path: string; value: unknown }
   | { op: 'add'; path: string; value: unknown }
@@ -35,14 +37,14 @@ function getAtPath(obj: unknown, path: string): unknown {
 function setAtPath(obj: unknown, path: string, value: unknown): unknown {
   if (path === '') return value
   const segments = path.slice(1).split('/').map(unescapeSegment)
-  const root = structuredClone(obj) as Record<string, unknown>
+  const root = cloneJson(obj) as Record<string, unknown>
   let cur: Record<string, unknown> = root
   for (let i = 0; i < segments.length - 1; i++) {
     const seg = segments[i]
     if (cur[seg] == null || typeof cur[seg] !== 'object') {
       cur[seg] = {}
     } else {
-      cur[seg] = structuredClone(cur[seg])
+      cur[seg] = cloneJson(cur[seg])
     }
     cur = cur[seg] as Record<string, unknown>
   }
@@ -54,12 +56,12 @@ function setAtPath(obj: unknown, path: string, value: unknown): unknown {
 function deleteAtPath(obj: unknown, path: string): unknown {
   if (path === '') return undefined
   const segments = path.slice(1).split('/').map(unescapeSegment)
-  const root = structuredClone(obj) as Record<string, unknown>
+  const root = cloneJson(obj) as Record<string, unknown>
   let cur: Record<string, unknown> = root
   for (let i = 0; i < segments.length - 1; i++) {
     const seg = segments[i]
     if (cur[seg] == null || typeof cur[seg] !== 'object') return root
-    cur[seg] = structuredClone(cur[seg])
+    cur[seg] = cloneJson(cur[seg])
     cur = cur[seg] as Record<string, unknown>
   }
   delete cur[segments[segments.length - 1]]
@@ -113,9 +115,9 @@ function diffAt(a: unknown, b: unknown, path: string, ops: PatchOp[]): void {
       const inA = Object.prototype.hasOwnProperty.call(aObj, k)
       const inB = Object.prototype.hasOwnProperty.call(bObj, k)
       if (!inA) {
-        ops.push({ op: 'add', path: childPath, value: structuredClone(bObj[k]) })
+        ops.push({ op: 'add', path: childPath, value: cloneJson(bObj[k]) })
       } else if (!inB) {
-        ops.push({ op: 'remove', path: childPath, oldValue: structuredClone(aObj[k]) })
+        ops.push({ op: 'remove', path: childPath, oldValue: cloneJson(aObj[k]) })
       } else {
         diffAt(aObj[k], bObj[k], childPath, ops)
       }
@@ -124,7 +126,7 @@ function diffAt(a: unknown, b: unknown, path: string, ops: PatchOp[]): void {
   }
 
   // Arrays — emit a single replace for the whole array (naive; sufficient for our use case)
-  ops.push({ op: 'replace', path, value: structuredClone(b), oldValue: structuredClone(a) } as PatchOp & { oldValue?: unknown })
+  ops.push({ op: 'replace', path, value: cloneJson(b), oldValue: cloneJson(a) } as PatchOp & { oldValue?: unknown })
 }
 
 export function diff<T>(a: T, b: T): Patch {
@@ -157,7 +159,7 @@ export function invert<T>(state: T, patch: Patch): Patch {
   for (const op of patch) {
     if (op.op === 'replace') {
       const old = getAtPath(cur, op.path)
-      inverse.push({ op: 'replace', path: op.path, value: structuredClone(old) })
+      inverse.push({ op: 'replace', path: op.path, value: cloneJson(old) })
       cur = setAtPath(cur, op.path, op.value)
     } else if (op.op === 'add') {
       inverse.push({ op: 'remove', path: op.path, oldValue: op.value })

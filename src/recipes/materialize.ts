@@ -1,3 +1,4 @@
+import { cloneJson } from '../lib/clone'
 import type { RecipeInstance, RecipeDef, SchemaArrays, ElementType, Substitution, Locals, AnyElement } from './types'
 import type { RenameMap } from './rewrite-refs'
 import { rewriteRefs } from './rewrite-refs'
@@ -39,7 +40,7 @@ function buildRenameMap(locals: Locals, slug: string): RenameMap {
 }
 
 function applyRenameToNames(arrays: SchemaArrays, renameMap: RenameMap): SchemaArrays {
-  const result = structuredClone(arrays)
+  const result = cloneJson(arrays)
   for (const et of ['variables', 'classifiers', 'generators', 'functions'] as const) {
     const map = renameMap[et as keyof RenameMap]
     result[et] = result[et].map(el => {
@@ -69,7 +70,7 @@ export function interpretTemplate(
   substitutions: Substitution[],
   params: Record<string, unknown>,
 ): SchemaArrays {
-  const result: SchemaArrays = structuredClone(template)
+  const result: SchemaArrays = cloneJson(template)
   for (const sub of substitutions) {
     const { elementType, index, fieldPath } = sub.path
     const arr = result[elementType]

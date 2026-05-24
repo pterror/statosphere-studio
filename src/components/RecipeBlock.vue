@@ -36,6 +36,7 @@
           ref="renameInputRef"
           v-model="renameValue"
           type="text"
+          :aria-label="`Rename ${instance.name}`"
           class="rename-input text-sm font-medium"
           @keydown.enter.prevent="commitRename"
           @keydown.esc.prevent="cancelRename"
@@ -85,6 +86,7 @@
             <ChipList
               v-if="p.kind === 'label-list'"
               :model-value="(instance.params[p.key] as string[]) ?? []"
+              :label="p.label"
               @update:model-value="updateChipList(p.key, $event)"
               @click.stop
             />
@@ -92,6 +94,7 @@
             <select
               v-else-if="p.kind === 'enum'"
               :value="instance.params[p.key]"
+              :aria-label="p.label"
               class="param-input"
               @change="updateParam(p.key, ($event.target as HTMLSelectElement).value)"
             >
@@ -104,6 +107,7 @@
               :value="instance.params[p.key] as number"
               :min="p.min"
               :max="p.max"
+              :aria-label="p.label"
               class="param-input w-20"
               @change="updateParam(p.key, Number(($event.target as HTMLInputElement).value))"
             />
@@ -112,6 +116,7 @@
               v-else
               type="text"
               :value="instance.params[p.key] as string"
+              :aria-label="p.label"
               class="param-input w-28"
               @change="updateParam(p.key, ($event.target as HTMLInputElement).value)"
             />

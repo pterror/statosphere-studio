@@ -74,13 +74,14 @@
               <input
                 v-model="searchQuery"
                 type="text"
+                aria-label="Search history"
                 placeholder="Search history…"
                 class="glass-input w-full text-xs"
                 @keydown.stop
               />
             </div>
             <!-- Tree rows -->
-            <div class="flex-1 overflow-y-auto py-1" ref="treeEl">
+            <div class="flex-1 overflow-y-auto py-1" ref="treeEl" role="listbox" aria-label="History tree" tabindex="0">
               <div
                 v-for="row in visibleRows"
                 :key="row.node.id"
@@ -108,6 +109,7 @@
                     ref="renameInputRef"
                     v-model="renameValue"
                     type="text"
+                    aria-label="Rename history entry"
                     class="glass-input flex-1 text-xs h-5 py-0"
                     @keydown.enter.stop.prevent="commitRename"
                     @keydown.esc.stop.prevent="cancelRename"
@@ -166,7 +168,7 @@
               </div>
             </div>
             <!-- Preview JSON -->
-            <div class="flex-1 overflow-y-auto p-3">
+            <div class="flex-1 overflow-y-auto p-3" tabindex="0" aria-label="Patch preview">
               <pre v-if="selectedNode" class="text-xs whitespace-pre-wrap break-words history-preview-pre">{{ previewJson }}</pre>
               <div v-else class="text-xs" style="color: var(--text-muted)">Select a node to preview its patch.</div>
             </div>
