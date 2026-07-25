@@ -6,3 +6,8 @@ tmp/
 .idea/
 .vscode/
 *.swp
+
+# Normalize
+.normalize/*
+!.normalize/config.toml
+!.normalize/memory/
